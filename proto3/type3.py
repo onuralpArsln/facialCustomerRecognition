@@ -2,7 +2,7 @@ import cv2
 from pathlib import Path
 
 cv2.namedWindow("preview")
-vc = cv2.VideoCapture()
+vc = cv2.VideoCapture(0)
 
 if vc.isOpened(): # try to get the first frame
     rval, frame = vc.read()
