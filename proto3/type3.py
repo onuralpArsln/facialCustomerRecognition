@@ -1,30 +1,22 @@
 import cv2
+from pathlib import Path
 
-# Open the default camera
-cam = cv2.VideoCapture(0)
+cv2.namedWindow("preview")
+vc = cv2.VideoCapture()
 
-# Get the default frame width and height
-frame_width = int(cam.get(cv2.CAP_PROP_FRAME_WIDTH))
-frame_height = int(cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
+if vc.isOpened(): # try to get the first frame
+    rval, frame = vc.read()
+else:
+    rval = False
+    print("not working")
 
-# Define the codec and create VideoWriter object
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-out = cv2.VideoWriter('output.mp4', fourcc, 20.0, (frame_width, frame_height))
-
-while True:
-    ret, frame = cam.read()
-
-    # Write the frame to the output file
-    out.write(frame)
-
-    # Display the captured frame
-    cv2.imshow('Camera', frame)
-
-    # Press 'q' to exit the loop
-    if cv2.waitKey(1) == ord('q'):
+while rval:
+    cv2.imshow("preview", frame)
+    rval, frame = vc.read()
+    key = cv2.waitKey(20)
+    print("working")
+    if key == 27: # exit on ESC
         break
 
-# Release the capture and writer objects
-cam.release()
-out.release()
-cv2.destroyAllWindows()
+cv2.destroyWindow("preview")
+vc.release()
