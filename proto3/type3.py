@@ -6,13 +6,11 @@ import sys
 
 class FaceDirectionTracker:
     def __init__(self):
-        # Try different camera indices
         self.cap = self.initialize_camera()
         if self.cap is None:
             print("Error: Could not initialize any camera")
             sys.exit(1)
             
-        # Load face detection classifier
         try:
             self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
             if self.face_cascade.empty():
@@ -22,24 +20,22 @@ class FaceDirectionTracker:
             self.cap.release()
             sys.exit(1)
         
-        # Create directories for storing images
         self.incoming_dir = 'incoming_people'
         self.outgoing_dir = 'outgoing_people'
         os.makedirs(self.incoming_dir, exist_ok=True)
         os.makedirs(self.outgoing_dir, exist_ok=True)
         
-        # Dictionary to track faces
         self.face_tracks = {}
-    
+        self.incoming_count = 0
+        self.outgoing_count = 0
+        self.movement_threshold = 30
+        self.safe_zone = 20  # Pixels around initial position where movement is ignored
+
     def initialize_camera(self):
-        """Try multiple camera indices to find a working camera"""
-        # List of common camera indices to try
         camera_indices = [0, 1, 2, -1]
-        
         for idx in camera_indices:
             print(f"Trying to initialize camera {idx}...")
             cap = cv2.VideoCapture(idx)
-            
             if cap.isOpened():
                 ret, test_frame = cap.read()
                 if ret:
@@ -47,7 +43,6 @@ class FaceDirectionTracker:
                     return cap
                 else:
                     cap.release()
-            
         return None
 
     def detect_faces(self, frame):
@@ -58,16 +53,30 @@ class FaceDirectionTracker:
     def track_direction(self, face_x, face_id):
         if face_id in self.face_tracks:
             prev_x = self.face_tracks[face_id]['prev_x']
-            if abs(face_x - prev_x) > 40:  # Minimum movement threshold
+            stable_x = self.face_tracks[face_id]['initial_x']
+            
+            # Ignore minor movements within the "safe zone"
+            if abs(face_x - stable_x) <= self.safe_zone:
+                return False, None
+            
+            # Check for significant movement over threshold
+            if abs(face_x - prev_x) > self.movement_threshold:
                 direction = 'incoming' if face_x > prev_x else 'outgoing'
                 if direction != self.face_tracks[face_id]['direction']:
                     self.face_tracks[face_id]['direction'] = direction
+                    if direction == 'incoming':
+                        self.incoming_count += 1
+                    else:
+                        self.outgoing_count += 1
                     return True, direction
         else:
             self.face_tracks[face_id] = {
                 'prev_x': face_x,
+                'initial_x': face_x,  # Store the initial x-coordinate for reference
                 'direction': None
             }
+        
+        # Update previous x-coordinate
         self.face_tracks[face_id]['prev_x'] = face_x
         return False, None
     
@@ -96,10 +105,7 @@ class FaceDirectionTracker:
                 faces = self.detect_faces(frame)
                 
                 for i, (x, y, w, h) in enumerate(faces):
-                    # Draw rectangle around face
                     cv2.rectangle(frame, (x, y), (x+w, y+h), (255, 0, 0), 2)
-                    
-                    # Track direction
                     face_center_x = x + w//2
                     direction_changed, direction = self.track_direction(face_center_x, i)
                     
@@ -108,6 +114,12 @@ class FaceDirectionTracker:
                         status = f"Person {direction}!"
                         cv2.putText(frame, status, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 
                                   1, (0, 255, 0), 2)
+                
+                # Display incoming and outgoing counts in the top-left corner
+                cv2.putText(frame, f"Incoming: {self.incoming_count}", (10, 50),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                cv2.putText(frame, f"Outgoing: {self.outgoing_count}", (10, 70),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
                 
                 # Display the frame
                 cv2.imshow('Face Direction Tracker', frame)
