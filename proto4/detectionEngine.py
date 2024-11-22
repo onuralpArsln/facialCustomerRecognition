@@ -1,7 +1,18 @@
 import cv2
 import os
-import mediapipe as mp
-import dlib
+
+MISSING_IMPORT_dlib = False
+MISSING_IMPORT_mediapipe= False
+try:
+    import mediapipe as mp
+except:
+    MISSING_IMPORT_mediapipe= True
+    print("pip3 install mediapipe")
+try:
+    import dlib
+except:
+    MISSING_IMPORT_dlib = True
+    print("pip3 install dlib")
 
 
 
@@ -14,9 +25,15 @@ class DetectionEngine:
         #1
         self.frontalFaceHaarCascade=cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
         #2
-        self.dlibDetector = dlib.get_frontal_face_detector()
+        if MISSING_IMPORT_dlib:
+             print("pip3 install dlib")
+        else:
+            self.dlibDetector = dlib.get_frontal_face_detector()
         #3
-        self.mp_face_detection = mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5)
+        if MISSING_IMPORT_mediapipe:
+             print("pip3 install mediapipe")
+        else:
+            self.mp_face_detection = mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5)
 
 
 
@@ -44,21 +61,27 @@ class DetectionEngine:
                 # haarcascade kullan
                 faces = self.frontalFaceHaarCascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
             case 1:  # Dlib
-                gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                dlib_faces = self.dlibDetector(gray_image)
-                faces = [(face.left(), face.top(), face.width(), face.height()) for face in dlib_faces]
+                if MISSING_IMPORT_dlib:
+                    print("pip3 install dlib")
+                else:
+                    gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    dlib_faces = self.dlibDetector(gray_image)
+                    faces = [(face.left(), face.top(), face.width(), face.height()) for face in dlib_faces]
             case 2:  # MediaPipe
-                rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                results = self.mp_face_detection.process(rgb_image)
-                if results.detections:
-                    for detection in results.detections:
-                        bboxC = detection.location_data.relative_bounding_box
-                        ih, iw, _ = image.shape
-                        x = int(bboxC.xmin * iw)
-                        y = int(bboxC.ymin * ih)
-                        w = int(bboxC.width * iw)
-                        h = int(bboxC.height * ih)
-                        faces.append((x, y, w, h))
+                if MISSING_IMPORT_mediapipe:
+                    print("pip3 install mediapipe")
+                else:
+                    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    results = self.mp_face_detection.process(rgb_image)
+                    if results.detections:
+                        for detection in results.detections:
+                            bboxC = detection.location_data.relative_bounding_box
+                            ih, iw, _ = image.shape
+                            x = int(bboxC.xmin * iw)
+                            y = int(bboxC.ymin * ih)
+                            w = int(bboxC.width * iw)
+                            h = int(bboxC.height * ih)
+                            faces.append((x, y, w, h))
             case _:
                 raise ValueError("Invalid method! Use 0 (Haar), 1 (Dlib), or 2 (MediaPipe).")
         
@@ -128,18 +151,20 @@ class DetectionEngine:
 
 # Main program
 if __name__ == "__main__":
-    # Use the image file name (since it's in the same folder as the script)
-    image_path = "people.png"
 
-    image = cv2.imread(image_path)
+    # face images
+    if True:
+        image_path = "people.png"
+        image = cv2.imread(image_path)
+        testEngine = DetectionEngine()
+        testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True, method=0)
+        testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True,method=1)
+        testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True,method=2)
+       
 
-    testEngine = DetectionEngine()
-
-    testEngine.detectFaceLocations(image, show=True,imageDownSize=True)
-
-
-    image_path = "body.png"
-    image = cv2.imread(image_path)
-    testEngine.detectFaceLocations(image, show=True)
-
-    testEngine.detectBodyLocations(image, show=True,method=1)
+    # body test 
+    if False:
+        image_path = "body.png"
+        image = cv2.imread(image_path)
+        testEngine.detectFaceLocations(image, show=True)
+        testEngine.detectBodyLocations(image, show=True,method=1)
