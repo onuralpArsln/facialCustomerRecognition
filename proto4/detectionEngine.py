@@ -4,7 +4,9 @@ import os
 
 class DetectionEngine:
 
-    def __init__(self,) -> None:
+    def __init__(self,defaultImageSize=(450,450)) -> None:
+        ## default image size for downsizing if enabled
+        self.defaultImageSize = defaultImageSize
         ###generate Face detectors ,
         #1
         self.frontalFaceHaarCascade=cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
@@ -16,13 +18,17 @@ class DetectionEngine:
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
     
-    def detectFaceLocations(self,image,show=False):
+    def detectFaceLocations(self,image,show=False,imageDownSize=False,verbose=True):
 
+        if imageDownSize:
+            image = self.imageDownScale(image)
+        
         #haar cascade verimliliği için gray scale al
         gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         # haarcascade kullan
         faces = self.frontalFaceHaarCascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
-
+        if verbose:
+            print(f"Number of faces detected: {len(faces)}")
         if show:
             for (x, y, w, h) in faces:
                     cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Blue rectangle
@@ -37,15 +43,18 @@ class DetectionEngine:
         return faces
     
     
-    def detectBodyLocations(self,image,show=False,method=1):
+    def detectBodyLocations(self,image,show=False,method=1,imageDownSize=False,verbose=True):
+        if imageDownSize:
+            image = self.imageDownScale(image)
+            
         match method:
             case 0:
                 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 bodies = self.body_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=3, minSize=(50, 100))
             case 1:
                 bodies, _ = self.hog.detectMultiScale(image, winStride=(8, 8), padding=(8, 8), scale=1.05)
-        
-        print(f"Number of bodies detected: {len(bodies)}")
+        if verbose:
+            print(f"Number of bodies detected: {len(bodies)}")
         # görselleri ver eğer show ile istenirse
         if show:
             for i, (x, y, w, h) in enumerate(bodies):
@@ -57,8 +66,18 @@ class DetectionEngine:
         return bodies
 
 
-    def imageDownScale(image, desiredSize=(450,450)):
-        return cv2.resize(image, desiredSize, interpolation=cv2.INTER_AREA)
+    def imageDownScale(self,image):
+        """This method downsizes images, can be used inside detection modes so if the device running do not have 
+        enough processing power, down sizing images might help
+
+        Args:
+            image (_type_): _description_
+            desiredSize (tuple, optional): _description_. Defaults to (450,450).
+
+        Returns:
+            _type_: _description_
+        """
+        return cv2.resize(image, self.defaultImageSize, interpolation=cv2.INTER_AREA)
 
 
 
@@ -71,7 +90,7 @@ if __name__ == "__main__":
 
     testEngine = DetectionEngine()
 
-    testEngine.detectFaceLocations(image, show=True)
+    testEngine.detectFaceLocations(image, show=True,imageDownSize=True)
 
 
     image_path = "body.png"
