@@ -1,5 +1,6 @@
 import cv2
 import os
+import numpy as np
 
 MISSING_IMPORT_dlib = False
 MISSING_IMPORT_mediapipe= False
@@ -14,8 +15,6 @@ except:
     MISSING_IMPORT_dlib = True
     print("pip3 install dlib")
 
-
-
 class DetectionEngine:
 
     def __init__(self,defaultImageSize=(450,450)) -> None:
@@ -24,6 +23,7 @@ class DetectionEngine:
         ###generate Face detectors ,
         #1
         self.frontalFaceHaarCascade=cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+        self.frontalFaceProfileCascade=cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_profileface.xml')
         #2
         if MISSING_IMPORT_dlib:
              print("pip3 install dlib")
@@ -34,8 +34,6 @@ class DetectionEngine:
              print("pip3 install mediapipe")
         else:
             self.mp_face_detection = mp.solutions.face_detection.FaceDetection(min_detection_confidence=0.5)
-
-
 
         ### generate body detectors
         #1 haarcascade_fullbody.xml is thrash so upper bod
@@ -52,29 +50,95 @@ class DetectionEngine:
                 min_tracking_confidence=0.5   # Confidence level for tracking landmarks
             )
     
-    def detectFaceLocations(self,image,method=0,show=False,imageDownSize=False,verbose=True):
+    def non_max_suppression(self, boxes, overlapThresh=0.4):
+        """
+        Non-maximum suppression to filter out overlapping detections
+        
+        Args:
+            boxes (list): List of detection boxes
+            overlapThresh (float): Threshold for considering boxes overlapping
+        
+        Returns:
+            list: Filtered list of boxes
+        """
+        # If no boxes, return empty list
+        if len(boxes) == 0:
+            return []
 
+        # Convert to numpy array
+        if isinstance(boxes, list):
+            boxes = np.array(boxes)
+
+        # Compute coordinates
+        x1 = boxes[:, 0]
+        y1 = boxes[:, 1]
+        x2 = boxes[:, 0] + boxes[:, 2]
+        y2 = boxes[:, 1] + boxes[:, 3]
+
+        # Compute area of each box
+        areas = (x2 - x1 + 1) * (y2 - y1 + 1)
+        
+        # Sort the indices by bottom-right y-coordinate
+        idxs = np.argsort(y2)
+        
+        pick = []
+        while len(idxs) > 0:
+            # Take the last index
+            last = len(idxs) - 1
+            i = idxs[last]
+            pick.append(i)
+
+            # Find the largest (x, y) coordinates for the start of the bounding box
+            # and the smallest coordinates for the end of the bounding box
+            xx1 = np.maximum(x1[i], x1[idxs[:last]])
+            yy1 = np.maximum(y1[i], y1[idxs[:last]])
+            xx2 = np.minimum(x2[i], x2[idxs[:last]])
+            yy2 = np.minimum(y2[i], y2[idxs[:last]])
+
+            # Compute width and height of the bounding box
+            w = np.maximum(0, xx2 - xx1 + 1)
+            h = np.maximum(0, yy2 - yy1 + 1)
+
+            # Compute overlap ratio
+            overlap = (w * h) / areas[idxs[:last]]
+
+            # Delete indices of boxes with significant overlap
+            idxs = np.delete(idxs, np.concatenate(([last], np.where(overlap > overlapThresh)[0])))
+
+        return boxes[pick].tolist()
+
+    def detectFaceLocations(self, image, method=0, show=False, imageDownSize=False, verbose=True):
         if image is None:
             raise ValueError("Input image is None!")
-    
+        
         if imageDownSize:
             image = self.imageDownScale(image)
-        
 
         faces = []
         match method:
             case 0:
-                #haar cascade verimliliği için gray scale al
+                # Use both frontal and profile face cascades
                 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                # haarcascade kullan
-                faces = self.frontalFaceHaarCascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
+                frontal_faces = self.frontalFaceHaarCascade.detectMultiScale(
+                    gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
+                )
+                profile_faces = self.frontalFaceProfileCascade.detectMultiScale(
+                    gray_image, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30)
+                )
+                
+                # Combine and remove overlapping detections
+                faces = self.non_max_suppression(list(frontal_faces) + list(profile_faces))
+            
             case 1:  # Dlib
                 if MISSING_IMPORT_dlib:
                     print("pip3 install dlib")
                 else:
                     gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                     dlib_faces = self.dlibDetector(gray_image)
-                    faces = [(face.left(), face.top(), face.width(), face.height()) for face in dlib_faces]
+                    faces = self.non_max_suppression(
+                        [(face.left(), face.top(), face.width(), face.height()) for face in dlib_faces]
+                    )
+            
             case 2:  # MediaPipe
                 if MISSING_IMPORT_mediapipe:
                     print("pip3 install mediapipe")
@@ -82,6 +146,7 @@ class DetectionEngine:
                     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
                     results = self.mp_face_detection.process(rgb_image)
                     if results.detections:
+                        faces_temp = []
                         for detection in results.detections:
                             bboxC = detection.location_data.relative_bounding_box
                             ih, iw, _ = image.shape
@@ -89,28 +154,32 @@ class DetectionEngine:
                             y = int(bboxC.ymin * ih)
                             w = int(bboxC.width * iw)
                             h = int(bboxC.height * ih)
-                            faces.append((x, y, w, h))
+                            faces_temp.append((x, y, w, h))
+                        
+                        faces = self.non_max_suppression(faces_temp)
+            
             case _:
                 raise ValueError("Invalid method! Use 0 (Haar), 1 (Dlib), or 2 (MediaPipe).")
-    
+        
         if verbose:
             print(f"With method {method} Number of faces detected: {len(faces)}")
+        
         if show:
-            for (x, y, w, h) in faces:
-                    cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Blue rectangle
-            cv2.imshow("Original Image with Faces", image)
+            #indiv
             for i, (x, y, w, h) in enumerate(faces):
-                    face = image[y:y+h, x:x+w]  
-                    window_name = f"Face {i+1}"
-                    cv2.imshow(window_name, face)
+                face = image[y:y+h, x:x+w]  
+                window_name = f"body {i+1}"
+                cv2.imshow(window_name, face)
+            # one big 
+            for (x, y, w, h) in faces:
+                cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Blue rectangle
+            cv2.imshow("Original Image with Faces", image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
         return faces
-    
-    
-    def detectBodyLocations(self,image,show=False,method=0,imageDownSize=False,verbose=True):
-        
+
+    def detectBodyLocations(self, image, show=False, method=0, imageDownSize=False, verbose=True):
         if image is None:
             raise ValueError("Input image is None!")
         
@@ -121,40 +190,63 @@ class DetectionEngine:
         match method:
             case 0: # haar body 
                 gray_image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-                bodies = self.body_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=3, minSize=(50, 100))
+                bodies = self.body_cascade.detectMultiScale(
+                    gray_image, scaleFactor=1.1, minNeighbors=3, minSize=(50, 100)
+                )
+                bodies = self.non_max_suppression(bodies)
+            
             case 1: # cv2.HOGDescriptor()
-                bodies, _ = self.hog.detectMultiScale(image, winStride=(8, 8), padding=(8, 8), scale=1.05)
-            case 2:  # MediaPipe method for body detection (Note: MediaPipe doesn't offer a direct body detector, but you can use Pose for this)
+                bodies, _ = self.hog.detectMultiScale(
+                    image, winStride=(8, 8), padding=(8, 8), scale=1.05
+                )
+                bodies = self.non_max_suppression(bodies)
+            
+            case 2:  # MediaPipe method for body detection
                 if MISSING_IMPORT_mediapipe:
                     print("pip3 install mediapipe")
                 else:
-                    # Convert image to RGB
                     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    # Perform Pose detection
                     results = self.mp_pose.process(rgb_image)
                     if results.pose_landmarks:
-                        # Identify key points for body based on pose landmarks (hip, shoulder, etc.)
-                        for landmark in results.pose_landmarks.landmark:
-                            # Example: Just using shoulder and hip landmarks (adjust for full body detection)
-                            x, y = int(landmark.x * image.shape[1]), int(landmark.y * image.shape[0])
-                            cv2.circle(image, (x, y), 5, (0, 0, 255), -1)  # Mark points
-                        # Optional: You can define a bounding box or region for the body here
-                        bodies.append((x, y, 100, 200))  # This is an example, adjust as needed
-                
+                        bodies_temp = []
+                        # Use hip and shoulder landmarks to create body boxes
+                        landmarks = results.pose_landmarks.landmark
+                        left_shoulder = landmarks[11]
+                        right_shoulder = landmarks[12]
+                        left_hip = landmarks[23]
+                        right_hip = landmarks[24]
+                        
+                        # Calculate body region
+                        x = int(min(left_shoulder.x, right_shoulder.x, left_hip.x, right_hip.x) * image.shape[1])
+                        y = int(min(left_shoulder.y, right_shoulder.y, left_hip.y, right_hip.y) * image.shape[0])
+                        w = int(abs(max(left_shoulder.x, right_shoulder.x, left_hip.x, right_hip.x) - 
+                                    min(left_shoulder.x, right_shoulder.x, left_hip.x, right_hip.x)) * image.shape[1])
+                        h = int(abs(max(left_shoulder.y, right_shoulder.y, left_hip.y, right_hip.y) - 
+                                    min(left_shoulder.y, right_shoulder.y, left_hip.y, right_hip.y)) * image.shape[0])
+                        
+                        bodies_temp.append((x, y, w, h))
+                        bodies = self.non_max_suppression(bodies_temp)
             
             case _:
                 raise ValueError("Invalid method!")
         
         if verbose:
             print(f"With method {method} Number of bodies detected: {len(bodies)}")
-        # görselleri ver eğer show ile istenirse
+        
         if show:
+            # one big 
+            for (x, y, w, h) in bodies:
+                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)  # green rectangle bgr
+            #indiv
             for i, (x, y, w, h) in enumerate(bodies):
-                    body = image[y:y+h, x:x+w]  
-                    window_name = f"body {i+1}"
-                    cv2.imshow(window_name, body)
+                body = image[y:y+h, x:x+w]  
+                window_name = f"body {i+1}"
+                cv2.imshow(window_name, body)
+            
+
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+        
         return bodies
 
 
@@ -179,7 +271,7 @@ if __name__ == "__main__":
     testEngine = DetectionEngine()
     
     # face images
-    if False:
+    if True:
         image_path = "people.png"
         image = cv2.imread(image_path)
         
