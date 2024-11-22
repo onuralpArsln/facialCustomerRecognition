@@ -88,7 +88,7 @@ class DetectionEngine:
 
 
         if verbose:
-            print(f"Number of faces detected: {len(faces)}")
+            print(f"With method {method} Number of faces detected: {len(faces)}")
         if show:
             for (x, y, w, h) in faces:
                     cv2.rectangle(image, (x, y), (x + w, y + h), (255, 0, 0), 2)  # Blue rectangle
@@ -103,7 +103,7 @@ class DetectionEngine:
         return faces
     
     
-    def detectBodyLocations(self,image,show=False,method=1,imageDownSize=False,verbose=True):
+    def detectBodyLocations(self,image,show=False,method=0,imageDownSize=False,verbose=True):
         
         if image is None:
             raise ValueError("Input image is None!")
@@ -122,7 +122,7 @@ class DetectionEngine:
                 raise ValueError("Invalid method!")
         
         if verbose:
-            print(f"Number of bodies detected: {len(bodies)}")
+            print(f"With method {method} Number of bodies detected: {len(bodies)}")
         # görselleri ver eğer show ile istenirse
         if show:
             for i, (x, y, w, h) in enumerate(bodies):
