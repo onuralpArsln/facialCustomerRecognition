@@ -243,7 +243,7 @@ class DetectionEngine:
                 window_name = f"body {i+1}"
                 cv2.imshow(window_name, body)
             
-
+            cv2.imshow("Original Image with Faces", image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
         
