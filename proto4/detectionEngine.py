@@ -38,11 +38,19 @@ class DetectionEngine:
 
 
         ### generate body detectors
-        #1
-        self.body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fullbody.xml')
+        #1 haarcascade_fullbody.xml is thrash so upper bod
+        self.body_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_upperbody.xml')
         #2
         self.hog = cv2.HOGDescriptor()
         self.hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+        #3
+        if MISSING_IMPORT_mediapipe:
+            print("pip3 install mediapipe")
+        else:
+            self.mp_pose = mp.solutions.pose.Pose(
+                min_detection_confidence=0.5,  # Confidence level for detecting the pose
+                min_tracking_confidence=0.5   # Confidence level for tracking landmarks
+            )
     
     def detectFaceLocations(self,image,method=0,show=False,imageDownSize=False,verbose=True):
 
@@ -84,9 +92,7 @@ class DetectionEngine:
                             faces.append((x, y, w, h))
             case _:
                 raise ValueError("Invalid method! Use 0 (Haar), 1 (Dlib), or 2 (MediaPipe).")
-        
-
-
+    
         if verbose:
             print(f"With method {method} Number of faces detected: {len(faces)}")
         if show:
@@ -118,6 +124,24 @@ class DetectionEngine:
                 bodies = self.body_cascade.detectMultiScale(gray_image, scaleFactor=1.1, minNeighbors=3, minSize=(50, 100))
             case 1: # cv2.HOGDescriptor()
                 bodies, _ = self.hog.detectMultiScale(image, winStride=(8, 8), padding=(8, 8), scale=1.05)
+            case 2:  # MediaPipe method for body detection (Note: MediaPipe doesn't offer a direct body detector, but you can use Pose for this)
+                if MISSING_IMPORT_mediapipe:
+                    print("pip3 install mediapipe")
+                else:
+                    # Convert image to RGB
+                    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                    # Perform Pose detection
+                    results = self.mp_pose.process(rgb_image)
+                    if results.pose_landmarks:
+                        # Identify key points for body based on pose landmarks (hip, shoulder, etc.)
+                        for landmark in results.pose_landmarks.landmark:
+                            # Example: Just using shoulder and hip landmarks (adjust for full body detection)
+                            x, y = int(landmark.x * image.shape[1]), int(landmark.y * image.shape[0])
+                            cv2.circle(image, (x, y), 5, (0, 0, 255), -1)  # Mark points
+                        # Optional: You can define a bounding box or region for the body here
+                        bodies.append((x, y, 100, 200))  # This is an example, adjust as needed
+                
+            
             case _:
                 raise ValueError("Invalid method!")
         
@@ -152,19 +176,23 @@ class DetectionEngine:
 # Main program
 if __name__ == "__main__":
 
+    testEngine = DetectionEngine()
+    
     # face images
-    if True:
+    if False:
         image_path = "people.png"
         image = cv2.imread(image_path)
-        testEngine = DetectionEngine()
+        
         testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True, method=0)
         testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True,method=1)
         testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True,method=2)
        
 
     # body test 
-    if False:
+    if True:
         image_path = "body.png"
         image = cv2.imread(image_path)
         testEngine.detectFaceLocations(image, show=True)
+        testEngine.detectBodyLocations(image, show=True,method=0)
         testEngine.detectBodyLocations(image, show=True,method=1)
+        testEngine.detectBodyLocations(image, show=True,method=2)
