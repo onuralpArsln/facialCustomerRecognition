@@ -265,35 +265,117 @@ class DetectionEngine:
 
         return joined_bodies
 
-    def detectPerson(self, image, show=False, method_body=0, method_face=0, verbose=True):
+
+    def detectPerson(self, image, show=False, method_face=0, method_body=1, verbose=True):
+        """
+        Detect persons in image by requiring both face and body detection within expected area.
+        Only confirms a person when both face and body detections align properly.
+        
+        Args:
+            image: Input image
+            show: Whether to display results
+            method_face: Face detection method (0: Haar, 1: Dlib, 2: MediaPipe)
+            method_body: Body detection method (0: Haar Cascade, 1: HOG)
+            verbose: Whether to print detection counts
+        
+        Returns:
+            List of tuples (x, y, w, h) for each confirmed person
+         """
         if image is None:
             raise ValueError("Input image is None!")
 
-        bodies = self.detectBodyLocations(image, method=method_body, verbose=verbose)
+        # Get face locations first
         faces = self.detectFaceLocations(image, method=method_face, verbose=verbose)
+        if len(faces) == 0:
+            return []
 
+        # Get all body locations
+        all_bodies = self.detectBodyLocations(image, method=method_body, verbose=verbose)
+        if len(all_bodies) == 0:
+            return []
+        
         persons = []
-        for (bx, by, bw, bh) in bodies:
-            for (fx, fy, fw, fh) in faces:
-                face_center_x = fx + fw / 2
-                face_center_y = fy + fh / 2
-
-                if bx <= face_center_x <= bx + bw and by <= face_center_y <= by + bh:
-                    persons.append((bx, by, bw, bh))
-                    break
+        height, width = image.shape[:2]
+        
+        for (fx, fy, fw, fh) in faces:
+            # Calculate expected body area based on face
+            expected_height = int(fh * 7.5)  # Expected full height based on face
+            expected_width = int(fw * 2.5)   # Expected width based on face
+            
+            # Define search region below the face
+            search_x1 = max(0, fx - fw)  # Allow some lateral movement
+            search_x2 = min(width, fx + fw * 3)
+            search_y1 = fy  # Start from face top
+            search_y2 = min(height, fy + expected_height)
+            
+            # Look for body detections in the search region
+            valid_bodies = []
+            for (bx, by, bw, bh) in all_bodies:
+                # Check if body is properly positioned relative to face
+                if (bx < search_x2 and (bx + bw) > search_x1 and  # Horizontal overlap
+                    by < search_y2 and (by + bh) > fy and         # Vertical position check
+                    by >= fy):                                    # Body should start at or below face
+                    
+                    # Calculate overlap ratio between body and search region
+                    intersection_width = min(bx + bw, search_x2) - max(bx, search_x1)
+                    intersection_height = min(by + bh, search_y2) - max(by, fy)
+                    if intersection_width > 0 and intersection_height > 0:
+                        overlap_ratio = (intersection_width * intersection_height) / (bw * bh)
+                        
+                        # Check if body size is proportional to face size
+                        body_to_face_ratio = bh / fh
+                        if (5 <= body_to_face_ratio <= 9 and  # Height ratio check
+                            0.5 <= bw / fw <= 3 and           # Width ratio check
+                            overlap_ratio > 0.5):             # Sufficient overlap
+                            valid_bodies.append((bx, by, bw, bh))
+            
+            if valid_bodies:
+                # If we have valid bodies, use the one with best alignment to face
+                best_body = None
+                best_alignment = float('inf')
+                
+                for body in valid_bodies:
+                    bx, by, bw, bh = body
+                    # Calculate face center to body center misalignment
+                    face_center_x = fx + fw/2
+                    body_center_x = bx + bw/2
+                    misalignment = abs(face_center_x - body_center_x)
+                    
+                    if misalignment < best_alignment:
+                        best_alignment = misalignment
+                        best_body = body
+                
+                if best_body and best_alignment < fw:  # Ensure face and body are well-aligned
+                    # Create person region that encompasses both face and body
+                    x = min(fx, best_body[0])
+                    y = fy  # Start from face
+                    w = max(fw, best_body[2])
+                    h = (best_body[1] + best_body[3]) - y  # Full height from face top to body bottom
+                    persons.append((x, y, w, h))
 
         if verbose:
-            print(f"Number of persons detected: {len(persons)}")
+            print(f"Number of faces detected: {len(faces)}")
+            print(f"Number of bodies detected: {len(all_bodies)}")
+            print(f"Number of confirmed persons: {len(persons)}")
 
         if show:
+            display_img = image.copy()
+            # Draw all body detections in light blue
+            for (x, y, w, h) in all_bodies:
+                cv2.rectangle(display_img, (x, y), (x + w, y + h), (255, 191, 0), 1)
+            # Draw faces in blue
+            for (x, y, w, h) in faces:
+                cv2.rectangle(display_img, (x, y), (x + w, y + h), (255, 0, 0), 2)
+            # Draw confirmed persons in green
             for (x, y, w, h) in persons:
-                cv2.rectangle(image, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                cv2.rectangle(display_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
 
-            cv2.imshow("Detected Persons", image)
+            cv2.imshow("Detected Persons", display_img)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
 
         return persons
+
 
     def imageDownScale(self, image):
         return cv2.resize(image, self.defaultImageSize, interpolation=cv2.INTER_AREA)
@@ -303,7 +385,7 @@ if __name__ == "__main__":
     if True:
         image_path = "body.png"
         image = cv2.imread(image_path)
-        testEngine.detectPerson(image, show=True, method_body=1, method_face=0)
+        testEngine.detectPerson(image, show=True,)
 
     
     # face images
