@@ -206,6 +206,19 @@ class DetectionEngine:
 
                         bodies_temp.append((x, y, w, h))
                         bodies = self.non_max_suppression(bodies_temp)
+            case 3:
+                # Initialize HOG descriptor
+                hog = cv2.HOGDescriptor()
+                hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+                
+                # Perform body detection
+                bodies, _ = hog.detectMultiScale(
+                    image, winStride=(8, 8), padding=(8, 8), scale=1.05
+                )
+                
+                # Apply non-maximum suppression
+                bodies = self.non_max_suppression(bodies)
+
 
             case _:
                 raise ValueError("Invalid method!")
@@ -382,7 +395,7 @@ class DetectionEngine:
 
 if __name__ == "__main__":
     testEngine = DetectionEngine()
-    if True:
+    if False:
         image_path = "body.png"
         image = cv2.imread(image_path)
         testEngine.detectPerson(image, show=True,)
@@ -399,10 +412,10 @@ if __name__ == "__main__":
        
 
     # body test 
-    if False:
+    if True:
         image_path = "body.png"
         image = cv2.imread(image_path)
-        testEngine.detectBodyLocations(image, show=True,method=0)
+        testEngine.detectBodyLocations(image, show=True,method=3)
         testEngine.detectFaceLocations(image, show=True,imageDownSize=True,verbose=True, method=0)
      
         testEngine.detectBodyLocations(image, show=True,method=1,join_overlaps=True,iou_threshold=0.9)
