@@ -1,4 +1,4 @@
-#!/home/onuralp/projects/facialCustomerRecognition/proto5/.venv/bin/python3
+#!/home/onuralp/projects/facialCustomerRecognition/proto5/.venv/bin/python3.10
 # -*- coding: utf-8 -*-
 import re
 import sys
