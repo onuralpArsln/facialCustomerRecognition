@@ -13,23 +13,28 @@ video_capture = cv2.VideoCapture(0)
 # Initialize some variables
 face_locations = []
 
+i=0
 while True:
+    i+=1
+    if i>10000:
+        i=0
+        continue
     # Grab a single frame of video
     ret, frame = video_capture.read()
 
-    # Resize frame of video to 1/4 size for faster face detection processing
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
+    # Resize frame of video to 1/5 size for faster face detection processing
+    small_frame = cv2.resize(frame, (0, 0), fx=0.20, fy=0.20)
 
     # Find all the faces and face encodings in the current frame of video
     face_locations = face_recognition.face_locations(small_frame, model="cnn")
 
     # Display the results
     for top, right, bottom, left in face_locations:
-        # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-        top *= 4
-        right *= 4
-        bottom *= 4
-        left *= 4
+        # Scale back up face locations since the frame we detected in was scaled to 1/5 size
+        top *= 5
+        right *= 5
+        bottom *= 5
+        left *= 5
 
         # Extract the region of the image that contains the face
         face_image = frame[top:bottom, left:right]
