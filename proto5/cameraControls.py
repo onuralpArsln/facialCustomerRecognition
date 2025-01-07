@@ -5,9 +5,9 @@ class Camera:
     cam=None        # Camera objesi tarafından seçilen kamera
 
     def __init__(self):
-        self.cam= cv2.VideoCapture(0)
+        self.cam= cv2.VideoCapture(0,cv2.CAP_V4L2)
 
-    def getImage(self,frame_width=None,frame_height=None) ->  cv2.typing.MatLike:
+    def getImage(self,frame_width=None,frame_height=None):
         """
         Cameradan görüntü alır ve döndürür bunu direkt gösterebiliyon cv2  ile.
         Args:
