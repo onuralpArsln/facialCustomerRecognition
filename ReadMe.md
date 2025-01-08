@@ -31,7 +31,7 @@ deactivate
 ```
 
 
-### Temel gereksinimler
+## Temel gereksinimler
 
 ``` bash 
 sudo apt update
@@ -62,7 +62,7 @@ sudo apt-get install libgtk-3-dev libboost-python-dev
 ```
 
 
-### Proje Gereksinimleri
+## Proje Gereksinimleri
 
 ```bash 
 pip3 install --upgrade pip
@@ -84,7 +84,7 @@ sudo apt-get install python3-qt5
 ```
 
 
-### Daha büyük gereksinimler 
+## Daha büyük gereksinimler 
 
 Burası biraz şenlikli yaklaşımına göre
 
@@ -111,7 +111,7 @@ sudo apt-get remove python3-opencv
 
 # Projedeki Classlar Dökümantasyon kısmı 
 
-### Camera from cameraControls.py
+## Camera from cameraControls.py
 
 Amacı kameranın kontrolüdür
 
