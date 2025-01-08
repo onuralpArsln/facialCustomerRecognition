@@ -1,6 +1,13 @@
 import cv2
 
 class Camera:
+    """Camera Kontrol Sınıfı \n
+    getImage() -> foto çek  \n
+    displayFrame() -> fotoyu göster \n
+
+    Returns:
+        _type_: camera
+    """
     lastFrame=None  # getImage tarafından gelen son görüntü
     cam=None        # Camera objesi tarafından seçilen kamera
 
