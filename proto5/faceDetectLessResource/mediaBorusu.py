@@ -9,7 +9,7 @@ mp_drawing = mp.solutions.drawing_utils
 cap = cv2.VideoCapture(0)  # Eğer 0 sorun yaratırsa, video dosyasının yolunu buraya koy
 
 # MediaPipe yüz tespiti başlat
-with mp_face_detection.FaceDetection(min_detection_confidence=0.95) as face_detection:
+with mp_face_detection.FaceDetection(min_detection_confidence=0.5) as face_detection:
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
