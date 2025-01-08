@@ -4,6 +4,7 @@
 | haarcascade       | ??????        | kötü         | 
 | hogdlib           | ??????        | iyimsikötümtrak| 
 | opencvdnn         | ??????        | çok iyi        | 
+| mediapipe (borusu)| ??????        | vallah en iyisi | 
  
 
 
@@ -14,9 +15,9 @@ hogdlib ~ opencvdlib
 
 opencvdnn baya iyi ama muhtemeln içinden geçiyor performansın onu bi şaapmak lazım 
 
-
-
-
+mediapipe baya iyi çıktı he 
+ ama onu biraz çözemek lazım 
+media pipe baya iyi ama test edilkmeli acil işe yarayıosa çünkü süperişko
 
 
 
