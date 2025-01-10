@@ -13,12 +13,13 @@ class frameWorks:
 
     def drawBoundingBox(self,frame : cv2.typing.MatLike,detectionsFromMbt,label:str):
         if frame.all():
+                self.lastKnownLocations=[]
                 for detection in detectionsFromMbt:
                     # Koordinatları orijinal boyuta geri ölçeklendir
                     bboxC = detection.location_data.relative_bounding_box
                     ih, iw = frame.shape[:2]
                     bbox=[int(bboxC.xmin * iw),int(bboxC.ymin *ih),int(bboxC.width * iw ),int(bboxC.height * ih)]                    
-                 
+                    self.lastKnownLocations.append(bbox)
                     cv2.rectangle(frame, 
                                 (bbox[0], bbox[1]), 
                                 (bbox[0] + bbox[2], bbox[1] + bbox[3]), 
