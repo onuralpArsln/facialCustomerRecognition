@@ -5,7 +5,7 @@ import time
 
 
 camera = Camera()
-mbt=MediaBorusuTahminci(confidence=0.7)
+mbt=MediaBorusuTahminci()
 fw=frameWorks()
 
 
@@ -16,9 +16,8 @@ while True:
 
     locations=mbt.tahmin(camera.lastFrame)
 
-    #print(locations[0].location_data.relative_bounding_box)
+    frame=fw.drawBoundingBox(detectionsFromMbt=locations,frame=camera.lastFrame,label="salak")
+  
 
-    frame=fw.drawBoundingBox(detectionsFromMbt=locations,frame=camera.lastFrame,label="s")
-
-    
     camera.displayFrame(frame,fps=10)
+
