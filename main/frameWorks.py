@@ -6,20 +6,26 @@ class frameWorks:
     lastEditedFrame=None
     lastKnownLocations=None
 
+    def mbt2list(self,detection,frame: cv2.typing.MatLike):
+        # Koordinatları orijinal boyuta geri ölçeklendir
+        bboxC = detection.location_data.relative_bounding_box
+        ih, iw = frame.shape[:2]
+        bbox=[int(bboxC.xmin * iw),int(bboxC.ymin *ih),int(bboxC.width * iw ),int(bboxC.height * ih)]  
+        return bbox
 
-    def drawBoundingBox(self,frame : cv2.typing.MatLike,detectionsFromMbt,label:str):
+    def drawBoundingBox(self,frame : cv2.typing.MatLike, detectionsFromMbt,label:str = None):
         
         if detectionsFromMbt is None:
             return frame
-            
        
         if frame.any():
             self.lastKnownLocations=[]  
             for detection in detectionsFromMbt:
                 # Koordinatları orijinal boyuta geri ölçeklendir
-                bboxC = detection.location_data.relative_bounding_box
-                ih, iw = frame.shape[:2]
-                bbox=[int(bboxC.xmin * iw),int(bboxC.ymin *ih),int(bboxC.width * iw ),int(bboxC.height * ih)]  
+                #bboxC = detection.location_data.relative_bounding_box
+                #ih, iw = frame.shape[:2]
+                #bbox=[int(bboxC.xmin * iw),int(bboxC.ymin *ih),int(bboxC.width * iw ),int(bboxC.height * ih)]  
+                bbox=self.mbt2list(detection,frame)
                 self.lastKnownLocations.append(bbox)
                 cv2.rectangle(frame, 
                             (bbox[0], bbox[1]), 
@@ -27,7 +33,7 @@ class frameWorks:
                             (0, 255, 0), 1)
                                 
                 # ID ve score'u yaz (kutu üzerinde)
-                text = f"ID: {label})"
+                text = f"ID: {detection.label_id})"
                 text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
                 text_width, text_height = text_size
 
@@ -53,3 +59,8 @@ class frameWorks:
 
         return crops
 
+
+class Detected:
+    image = None
+    location=[0,0,0,0]
+    name=""

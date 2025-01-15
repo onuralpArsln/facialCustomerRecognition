@@ -10,13 +10,15 @@ fw=frameWorks()
 
 
 
+
+
 while True:
     
     camera.getImage()
 
     locations=mbt.tahmin(camera.lastFrame)
 
-    frame=fw.drawBoundingBox(detectionsFromMbt=locations,frame=camera.lastFrame,label="salak")
+    frame=fw.drawBoundingBox(detectionsFromMbt=locations,frame=camera.lastFrame)
 
     faces=fw.splitFaces(frame=frame)
   
