@@ -17,7 +17,9 @@ while True:
     locations=mbt.tahmin(camera.lastFrame)
 
     frame=fw.drawBoundingBox(detectionsFromMbt=locations,frame=camera.lastFrame,label="salak")
+
+    faces=fw.splitFaces(frame=frame)
   
 
-    camera.displayFrame(fps=10)
+    camera.displayFrame(additionalFrames=faces, frame=frame,fps=10)
 
