@@ -11,6 +11,7 @@ class frameWorks:
         
         if detectionsFromMbt is None:
             return frame
+            
        
         if frame.any():
             self.lastKnownLocations=[]  

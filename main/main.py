@@ -19,5 +19,5 @@ while True:
     frame=fw.drawBoundingBox(detectionsFromMbt=locations,frame=camera.lastFrame,label="salak")
   
 
-    camera.displayFrame(frame,fps=10)
+    camera.displayFrame(fps=10)
 
