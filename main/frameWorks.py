@@ -8,6 +8,9 @@ class frameWorks:
 
 
     def drawBoundingBox(self,frame : cv2.typing.MatLike,detectionsFromMbt,label:str):
+        
+        if detectionsFromMbt is None:
+            return frame
        
         if frame.any():
             self.lastKnownLocations=[]  
