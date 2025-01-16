@@ -8,6 +8,7 @@ class frameWorks:
     lastKnownLocations=None
     lastGivenFrame=None
     detectedHumans=[]
+    trackedHumans=0
 
     def mbt2list(self,detection,frame: cv2.typing.MatLike):
         # Koordinatları orijinal boyuta geri ölçeklendir
@@ -101,18 +102,28 @@ class frameWorks:
                     detectTemp.location=[ location[0],location[1], location[0]+location[2],location[1]+location[3]]
                     detectTemp.name=str(len(self.detectedHumans))
                     self.detectedHumans.append(detectTemp)
-                
+                    self.trackedHumans+=1
             
         else:
+            locationsMem=copy.deepcopy(self.lastKnownLocations)
             for human in self.detectedHumans:
-                for location in self.lastKnownLocations:
+                if human.isDeleted: continue
+                for location in locationsMem:
                     locList=[location[0],location[1], location[0]+location[2],location[1]+location[3]]
                     if self.iou(locList,human.location) > 0.6:
                         # iyi bir match yakalamış 
                         human.location=copy.deepcopy(locList)
+                        location=None # bir detection olan locationları none yap
                         break
                 # eğer buraya vurduysa locationlar bitti ve o human görünürde yok
                 human.location=[0,0,0,0]
+                human.isDeleted =True
+                self.trackedHumans-=1
+
+            # non null locationlarda yeni tanınan insan var demek
+            for location in locationsMem:
+                if location is not None:
+                    raise Exception("Not implemented yet")
 
 
     def updateLocations(self,frame : cv2.typing.MatLike, detectionsFromMbt):
@@ -139,3 +150,4 @@ class Detected:
     image = None
     location=[0,0,0,0]  # x1 y1 x2 y2 
     name=""
+    isDeleted=False
