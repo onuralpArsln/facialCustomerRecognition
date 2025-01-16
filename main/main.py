@@ -22,6 +22,8 @@ while True:
 
     faces=fw.splitFaces(frame=frame)
   
+    fw.fwFacade(camera.lastFrame,locations)
 
     camera.displayFrame(additionalFrames=faces, frame=frame,fps=10)
+    
 
