@@ -9,6 +9,7 @@ class frameWorks:
     lastGivenFrame=None
     detectedHumans=[]
     trackedHumans=0
+    noDetectCounter=0
 
     def mbt2list(self,detection,frame: cv2.typing.MatLike):
         # Koordinatları orijinal boyuta geri ölçeklendir
@@ -89,8 +90,10 @@ class frameWorks:
     
     def updateHumans(self,frame):
         if self.lastKnownLocations is None:
+            print("none")
             return -1
         if len(self.lastKnownLocations)==0:
+            print("empty")
             return -1
         
         # en başta bir defa çalışıp durdu
@@ -114,16 +117,15 @@ class frameWorks:
                         # bu lokasyonda eşleşme yapılmış atla
                         continue
                     locList=[locationsMem[i][0],locationsMem[i][1], locationsMem[i][0]+locationsMem[i][2],locationsMem[i][1]+locationsMem[i][3]]
-                    if self.iou(locList,human.location) > 0.6:
+                    if self.iou(locList,human.location) > 0.4:
                         # iyi bir match yakalamış 
                         human.location=copy.deepcopy(locList)
                         locationsMem[i]=None # bir detection olan locationları none yap
-                        print("vurdum brek")
                         break
                 else:
                     # eğer buraya vurduysa locationlar bitti ve o human görünürde yok 
                     # break yerse else çalışmaz
-                    print("for lese")
+                    print("human deleted")
                     human.location=[0,0,0,0]
                     human.isDeleted =True
                     self.trackedHumans-=1
@@ -158,6 +160,8 @@ class frameWorks:
 
     def drawTrackedHumans(self,frame):
         for human in self.detectedHumans:
+            if human.isDeleted:
+                continue
             cv2.rectangle(frame, 
                             (human.location[0], human.location[1]), 
                             (human.location[2],human.location[3]), 
@@ -179,7 +183,12 @@ class frameWorks:
 
                
     def fwFacade(self,frame : cv2.typing.MatLike, detectionsFromMbt):
-        if self.updateLocations(frame,detectionsFromMbt) == -1: print("pırta")
+        if self.updateLocations(frame,detectionsFromMbt) == -1: self.noDetectCounter+=1
+        if self.noDetectCounter>4:
+            self.noDetectCounter==0
+            print("kimse yok şuan")
+            self.lastKnownLocations=[]
+            self.detectedHumans=[]
         if self.updateHumans(frame) == -1 : print("Pırtonce")
         res=self.drawTrackedHumans(frame)
         return res
