@@ -2,15 +2,23 @@ from cameraControls import Camera
 from mediaBorusuTahminci import MediaBorusuTahminci
 from frameWorks import frameWorks
 import time
+from deneme import App
 
 
+
+App()
+'''
 camera = Camera()
 mbt=MediaBorusuTahminci()
 fw=frameWorks()
 
 
 
+
+
 while True:
+    
+    
     
     camera.getImage()
 
@@ -20,4 +28,4 @@ while True:
   
 
     camera.displayFrame(frame,fps=10)
-
+'''

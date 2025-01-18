@@ -12,7 +12,8 @@ class Camera:
     cam=None        # Camera objesi tarafından seçilen kamera
 
     def __init__(self):
-        self.cam= cv2.VideoCapture(0,cv2.CAP_V4L2)
+        self.cam = cv2.VideoCapture(0)
+
 
     def getImage(self,frame_width=None,frame_height=None):
         """
@@ -27,8 +28,9 @@ class Camera:
             frame_width = int(self.cam.get(cv2.CAP_PROP_FRAME_WIDTH))
             frame_height = int(self.cam.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-        ret, self.lastFrame = self.cam.read()
-
+        if self.cam is not None:
+            ret, self.lastFrame = self.cam.read()
+        
         if not ret:
             raise("cv2.VideoCapture cam.read() pırtladı imdat : getImage.py - Camera Class - getImage method")
 
