@@ -24,6 +24,9 @@ while True:
   
     fw.fwFacade(camera.lastFrame,locations)
 
-    camera.displayFrame(additionalFrames=faces, frame=frame,fps=10)
+    frame1=fw.fwFacade(camera.lastFrame,locations)
+
+    #camera.displayFrame(additionalFrames=faces, frame=frame,fps=10)
+    camera.displayFrame( frame=frame1,fps=10)
     
 
