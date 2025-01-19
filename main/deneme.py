@@ -1,48 +1,48 @@
 import tkinter as tk
 from tkinter import ttk
+import requests
 from tkcalendar import Calendar
 from PIL import Image, ImageTk
 import threading
 from cameraControls import Camera  # Camera sınıfını buradan içe aktar
 from mediaBorusuTahminci import MediaBorusuTahminci
 from frameWorks import frameWorks
-from database import FacialCustomerRecognitionDatabase
+from database import FirebaseHandler
 import time
 from datetime import datetime
 import io
 
-
 class App:
     def __init__(self, root):
-
+        '''
         self.camera = Camera()
         self.mbt = MediaBorusuTahminci()
         self.fw = frameWorks()
-        self.db = FacialCustomerRecognitionDatabase()
-
-        self.db.create_table()
+        '''
+        self.db = FirebaseHandler()
+        
 
         self.root = root
         self.root.title("Kamera Uygulaması")
-        self.root.attributes("-fullscreen", True)
+        self.root.state('zoomed')  # Fullscreen but with window controls
         self.root.resizable(False, False)
 
         # Kamera nesnesi
-        self.camera = Camera()
+        #self.camera = Camera()
 
         # Görüntü ekranı
         self.video_label = tk.Label(self.root, bg="black")
         self.video_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
         # Geçmiş butonu
-        self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.show_history)
+        self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.open_history)
         self.history_button.pack(pady=10)
-
+        '''
         # Kamerayı güncellemek için bir thread başlatıyoruz
         self.running = True
         self.update_thread = threading.Thread(target=self.update_frame, daemon=True)
         self.update_thread.start()
-
+    
     def update_frame(self):
         #9a = 0
         while self.running:
@@ -62,99 +62,124 @@ class App:
                 imgtk = ImageTk.PhotoImage(image=img)
                 self.video_label.imgtk = imgtk
                 self.video_label.configure(image=imgtk)
-                '''
+                
                 if a == 50:
                     self.add_customer(image=self.camera.lastFrame)
                     a = 0
-                '''
+                
             except Exception as e:
                 print(f"Hata: {e}")
             self.root.update_idletasks()
-
-    def add_customer(self, image):
-        # Bugünün tarihini ve saatini al
+    '''
+    def add_customer(self):
         now = datetime.now()
-        date_str = now.strftime("%d/%m/%Y")
-        time_str = now.strftime("%H:%M:%S")
+        self.db.upload_image_and_save_data("images(silinecek)/3.jpg", str(now), "images")
 
-        # Veritabanına müşteri ekle
-        self.db.add_customer(photo=image, count=0, day=date_str, time=time_str)
-        print("Kaydettik Kardeşiiiiiiim")
-
-    def show_history(self):
+    def open_history(self):
+        # Yeni bir pencere oluştur
         history_window = tk.Toplevel(self.root)
         history_window.title("Geçmiş")
-        history_window.geometry("1400x1000")
+        history_window.geometry("1500x800")
 
-        # Sol tarafta bir takvim oluştur
-        cal = Calendar(history_window, selectmode='day', date_pattern='dd/MM/yyyy')
-        cal.grid(row=0, column=0, padx=20, pady=20, sticky="n")
+        # Sol çerçeve (Takvim ve giriş sayısı etiketi)
+        left_frame = tk.Frame(history_window, width=360)
+        left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=20, pady=20)
 
-        # Sağ tarafta bir liste çerçevesi oluştur
-        history_frame = ttk.Frame(history_window)
-        history_frame.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
+        # Sol çerçeveyi ortalamak için bir boşluk çerçevesi ekleyin
+        left_frame.pack_propagate(False)
+        spacer_top = tk.Frame(left_frame, height=200)
+        spacer_top.pack(side=tk.TOP, fill=tk.X)
 
-        # Fotoğrafları ve diğer bilgileri göstermek için bir Canvas ve Scrollbar ekleyelim
-        canvas = tk.Canvas(history_frame)
-        scrollbar = ttk.Scrollbar(history_frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
+        # Takvim
+        self.calendar = Calendar(left_frame, selectmode='day')
+        self.calendar.pack(side=tk.TOP, padx=20, pady=20)
 
-        scrollable_frame.bind(
+        # Giriş sayısı etiketi
+        self.entry_count_var = tk.StringVar()
+        self.entry_count_var.set("Giriş sayısı: 0")
+        entry_count_label = tk.Label(left_frame, textvariable=self.entry_count_var, font=("Montserrat", 12))
+        entry_count_label.pack(side=tk.TOP, padx=20, pady=10)
+
+
+        # Sağ çerçeve (Kaydırılabilir Canvas)
+        right_frame = tk.Frame(history_window, width=840)
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+
+        canvas = tk.Canvas(right_frame)
+        scrollbar = ttk.Scrollbar(right_frame, orient=tk.VERTICAL, command=canvas.yview)
+        self.tree_frame = tk.Frame(canvas)
+
+        self.tree_frame.bind(
             "<Configure>",
             lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
         )
 
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.create_window((0, 0), window=self.tree_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
 
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.photo_labels = []  # Fotoğraf widget'larını tutmak için bir liste
-
-        def update_history():
-            selected_date = cal.get_date()
-            records = self.db.get_customers_by_date(selected_date)
-
-            # Önceki içerikleri temizle
-            for widget in scrollable_frame.winfo_children():
+        def update_table(event=None):
+            selected_date = self.calendar.selection_get()
+            records = self.db.get_data_by_date("images", selected_date)
+            self.entry_count_var.set(f"Giriş sayısı: {len(records)}")
+            # Tabloyu temizle (Canvas içindeki tüm elemanları yok et)
+            for widget in self.tree_frame.winfo_children():
                 widget.destroy()
 
-            self.photo_labels.clear()
+            # Görsel boyutu
+            image_width, image_height = 200, 200
 
-            # Yeni içerikleri ekle
-            for record in records:
-                photo_data = record[1]  # Fotoğraf verisi (BLOB)
-                time_str = record[3]  # Saat bilgisi
-                count = record[4]  # Sayı bilgisi
+            # Satıra 3 görsel yerleştirme
+            for idx, record in enumerate(records):
+                photo_url = record['image_url']
+                time = record['timestamp'].strftime("%H:%M")  # Sadece saat
+                count = record.get('count', 0)
 
-                # Fotoğrafı yükle ve göster
-                photo = Image.open(io.BytesIO(photo_data))  # BLOB verisini oku
-                photo = photo.resize((300, 300))
-                photo_img = ImageTk.PhotoImage(photo)
+                try:
+                    # Fotoğrafı indir ve göster
+                    response = requests.get(photo_url)
+                    img_data = response.content
+                    with Image.open(io.BytesIO(img_data)) as img:
+                        img = img.resize((image_width, image_height))
+                        imgtk = ImageTk.PhotoImage(img)
 
-                photo_label = tk.Label(scrollable_frame, image=photo_img)
-                photo_label.image = photo_img  # Referansı sakla, yoksa görüntü kaybolur
-                photo_label.pack(padx=10, pady=5, side="top")
+                    # Yeni bir satır oluştur (Her 3 görselde bir)
+                    if idx % 4 == 0:
+                        row_frame = tk.Frame(self.tree_frame, bg="white", relief=tk.FLAT)
+                        row_frame.pack(fill=tk.X, padx=10, pady=10)
 
-                # Diğer bilgileri göster
-                info_label = tk.Label(scrollable_frame, text=f"Saat: {time_str} | Sayı: {count}")
-                info_label.pack(padx=10, pady=5, side="top")
+                    # Görsel kutusu
+                    image_frame = tk.Frame(row_frame, bg="white", relief=tk.RAISED, borderwidth=1)
+                    image_frame.pack(side=tk.LEFT, padx=10, pady=10)
 
-                self.photo_labels.append(photo_label)
+                    # Fotoğraf
+                    photo_label = tk.Label(image_frame, image=imgtk, bg="white")
+                    photo_label.image = imgtk  # Fotoğraf referansını sakla
+                    photo_label.pack()
 
-        # Takvimde tarih seçildiğinde güncelleme yap
-        cal.bind("<<CalendarSelected>>", lambda e: update_history())
+                    # Metin bilgileri
+                    info_label = tk.Label(
+                        image_frame, 
+                        text=f"Saat: {time}\nSayı: {count}", 
+                        bg="white", 
+                        justify=tk.CENTER
+                    )
+                    info_label.pack()
 
-        # Varsayılan olarak bugünün tarihini seç ve listeyi doldur
-        cal.selection_set(datetime.now().strftime("%d/%m/%Y"))
-        update_history()
+                except Exception as e:
+                    print(f"Fotoğraf yüklenirken hata: {e}")
+        # Takvimde tarih seçildiğinde tabloyu güncelle
+        self.calendar.bind("<<CalendarSelected>>", update_table)
+        update_table()
+
 
     def on_close(self):
         # Pencere kapatılırken yapılacak işlemler
         self.running = False
-        self.update_thread.join()  # Thread'i sonlandır
-        del self.camera  # Kamera nesnesini temizle
+        #self.update_thread.join()  # Thread'i sonlandır
+        #del self.camera  # Kamera nesnesini temizle
         self.root.destroy()  # Tkinter ana penceresini kapat
 
 
