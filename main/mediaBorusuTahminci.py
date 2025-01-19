@@ -19,8 +19,6 @@ class MediaBorusuTahminci:
         if scaleFactor>1 or scaleFactor<=0 :
             raise("Scale Factoru naptın kankarino sadece 0-1 aralığında olabilir mediaBorusuTahminci.tahmin.scaleFactor")
         
-        
-
         # Orijinal görüntü boyutlarını al
         height, width = frame.shape[:2]
         frame_org=frame
