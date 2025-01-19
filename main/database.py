@@ -1,72 +1,46 @@
-import sqlite3
+import firebase_admin
+from firebase_admin import credentials, storage, firestore
 from datetime import datetime
 
-class FacialCustomerRecognitionDatabase:
-    def __init__(self, db_name='facial_customer_recognition.db'):
-        self.conn = sqlite3.connect(db_name, check_same_thread=False)
-        self.create_table()
+class FirebaseHandler:
+    def __init__(self):
 
-    def create_table(self):
-        with self.conn:
-            self.conn.execute('''
-                CREATE TABLE IF NOT EXISTS customers (
-                    ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    photo BLOB NOT NULL,
-                    day TEXT NOT NULL, -- DD-MM-YYYY
-                    time TEXT NOT NULL, -- SS:MM:HH
-                    count INTEGER NOT NULL,
-                    columnA TEXT,
-                    columnB INTEGER
-                )
-            ''')
+        # Firebase Admin SDK ile uygulamayı başlat
+        self.cred = credentials.Certificate("firebase.json")
+        firebase_admin.initialize_app(self.cred, {
+            "storageBucket": "facerec-24861.firebasestorage.app"  # Proje ID'ni buraya yaz
+        })
+        self.db = firestore.client()
+        self.bucket = storage.bucket()
 
-    def add_customer(self, photo, day, time, count, columnA=None, columnB=None):
-        with self.conn:
-            self.conn.execute('''
-                INSERT INTO customers (photo, day, time, count, columnA, columnB)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (photo, day, time, count, columnA, columnB))
+    def upload_image_and_save_data(self, image, image_name, collection_name):
+        
+        blob = self.bucket.blob(f"images/{image_name}")
+        #blob.upload_from_file(image)
+        with open(image, "rb") as image_file:
+            blob.upload_from_file(image_file)
+        blob.make_public()
+        image_url = blob.public_url
+        timestamp = datetime.now()
+        data = {
+            'image_url': image_url,
+            'timestamp': timestamp,
+            'count': 1
+        }
+        self.db.collection(collection_name).add(data)
+        return image_url
 
-    def delete_customer(self, customer_id):
-        with self.conn:
-            self.conn.execute('''
-                DELETE FROM customers WHERE ID = ?
-            ''', (customer_id,))
+    def get_data_by_date(self, collection_name, date):
+        date_start = datetime.combine(date, datetime.min.time())
+        date_end = datetime.combine(date, datetime.max.time())
+        docs = self.db.collection(collection_name).where('timestamp', '>=', date_start).where('timestamp', '<=', date_end).stream()
+        return [doc.to_dict() for doc in docs]
 
-    def update_customer(self, customer_id, photo=None, day=None, time=None, count=None, columnA=None, columnB=None):
-        with self.conn:
-            query = 'UPDATE customers SET '
-            params = []
-            if photo is not None:
-                query += 'photo = ?, '
-                params.append(photo)
-            if day is not None:
-                query += 'day = ?, '
-                params.append(day)
-            if time is not None:
-                query += 'time = ?, '
-                params.append(time)
-            if count is not None:
-                query += 'count = ?, '
-                params.append(count)
-            if columnA is not None:
-                query += 'columnA = ?, '
-                params.append(columnA)
-            if columnB is not None:
-                query += 'columnB = ?, '
-                params.append(columnB)
-            query = query.rstrip(', ')
-            query += ' WHERE ID = ?'
-            params.append(customer_id)
-            with self.conn:
-                self.conn.execute(query, params)
+    def count_data_by_date(self, collection_name, date):
+        data = self.get_data_by_date(collection_name, date)
+        return len(data)
 
-    def get_customers_by_date(self, day):
-        with self.conn:
-            cursor = self.conn.execute('''
-                SELECT * FROM customers WHERE day = ?
-            ''', (day,))
-            return cursor.fetchall()
-
-    def __del__(self):
-        self.conn.close()
+    def sum_count_variable(self, collection_name):
+        docs = self.db.collection(collection_name).stream()
+        total_count = sum(doc.to_dict().get('count', 0) for doc in docs)
+        return total_count
