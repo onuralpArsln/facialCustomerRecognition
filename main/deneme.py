@@ -1,3 +1,4 @@
+import asyncio
 import tkinter as tk
 from tkinter import ttk
 import requests
@@ -21,8 +22,6 @@ class App:
         self.mbt = MediaBorusuTahminci()
         self.fw = frameWorks()
         self.db = FirebaseHandler()
-
-        self.add_customer_process = Process(target=self.add_customer, args=(self.camera.lastFrame))
         
         self.root = root
         self.root.title("Kamera Uygulaması")
@@ -42,7 +41,7 @@ class App:
         self.update_frame()
         
     def update_frame(self):
-        self.a = self.a +1
+        #self.a = self.a +1
         if not self.running:
             return
         try:
@@ -55,19 +54,19 @@ class App:
             locations = self.mbt.tahmin(self.camera.lastFrame)
             frame = self.fw.drawBoundingBox(detectionsFromMbt=locations, frame=self.camera.lastFrame, label="salak")
             frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
-            
+            '''
             if self.a == 100:
                 self.add_customer(frame)
                 print("foto çekildi")
                 self.a = 0
-            
+            '''
             img = Image.fromarray(frame)
             img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
             imgtk = ImageTk.PhotoImage(image=img)
             self.video_label.imgtk = imgtk
             self.video_label.configure(image=imgtk)
         except Exception as e:
-            print(f"Hata: {e}")
+            pass
         self.root.after(100, self.update_frame)
     
     def add_customer(self, frame):
@@ -119,7 +118,7 @@ class App:
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        def update_table(event=None):
+        async def update_table(event=None):
             selected_date = self.calendar.selection_get()
             records = self.db.get_data_by_date("images", selected_date)
             self.entry_count_var.set(f"Giriş sayısı: {len(records)}")
@@ -144,7 +143,7 @@ class App:
                         img = img.resize((image_width, image_height))
                         imgtk = ImageTk.PhotoImage(img)
 
-                    # Yeni bir satır oluştur (Her 3 görselde bir)
+                    # Yeni bir satır oluştur (Her 4 görselde bir)
                     if idx % 4 == 0:
                         row_frame = tk.Frame(self.tree_frame, bg="white", relief=tk.FLAT)
                         row_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -160,19 +159,24 @@ class App:
 
                     # Metin bilgileri
                     info_label = tk.Label(
-                        image_frame, 
-                        text=f"Saat: {time}\nSayı: {count}", 
-                        bg="white", 
-                        justify=tk.CENTER
+                    image_frame, 
+                    text=f"Saat: {time}\nSayı: {count}", 
+                    bg="white", 
+                    justify=tk.CENTER
                     )
                     info_label.pack()
 
                 except Exception as e:
                     print(f"Fotoğraf yüklenirken hata: {e}")
+
+        # Takvimde tarih seçildiğinde tabloyu güncelle
+        self.calendar.bind("<<CalendarSelected>>", lambda event: self.root.after(0, lambda: asyncio.run(update_table(event))))
+        self.root.after(0, lambda: asyncio.run(update_table()))
+        '''
         # Takvimde tarih seçildiğinde tabloyu güncelle
         self.calendar.bind("<<CalendarSelected>>", update_table)
         update_table()
-
+        '''
 
     def on_close(self):
         # Pencere kapatılırken yapılacak işlemler
