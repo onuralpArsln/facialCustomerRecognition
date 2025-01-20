@@ -1,4 +1,5 @@
 import asyncio
+import multiprocessing
 import tkinter as tk
 from tkinter import ttk
 import requests
@@ -98,7 +99,6 @@ class App:
         entry_count_label = tk.Label(left_frame, textvariable=self.entry_count_var, font=("Montserrat", 12))
         entry_count_label.pack(side=tk.TOP, padx=20, pady=10)
 
-
         # Sağ çerçeve (Kaydırılabilir Canvas)
         right_frame = tk.Frame(history_window, width=840)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
@@ -118,7 +118,7 @@ class App:
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        async def update_table(event=None):
+        def update_table(event=None):
             selected_date = self.calendar.selection_get()
             records = self.db.get_data_by_date("images", selected_date)
             self.entry_count_var.set(f"Giriş sayısı: {len(records)}")
@@ -170,8 +170,14 @@ class App:
                     print(f"Fotoğraf yüklenirken hata: {e}")
 
         # Takvimde tarih seçildiğinde tabloyu güncelle
-        self.calendar.bind("<<CalendarSelected>>", lambda event: self.root.after(0, lambda: asyncio.run(update_table(event))))
-        self.root.after(0, lambda: asyncio.run(update_table()))
+        self.calendar.bind("<<CalendarSelected>>", update_table)
+        update_table()
+        '''
+        jobs = []
+        p = multiprocessing.Process(target=update_table, args=(self,))
+        jobs.append(p)
+        p.start()
+        '''
         '''
         # Takvimde tarih seçildiğinde tabloyu güncelle
         self.calendar.bind("<<CalendarSelected>>", update_table)
@@ -184,6 +190,7 @@ class App:
         #self.update_thread.join()  # Thread'i sonlandır
         #del self.camera  # Kamera nesnesini temizle
         self.root.destroy()  # Tkinter ana penceresini kapat
+
 
 
 if __name__ == "__main__":
