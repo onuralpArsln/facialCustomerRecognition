@@ -20,14 +20,10 @@ class App:
         self.fw = frameWorks()
         self.db = FirebaseHandler()
         
-
         self.root = root
         self.root.title("Kamera Uygulaması")
         self.root.state('zoomed')  # Fullscreen but with window controls
         self.root.resizable(False, False)
-
-        # Kamera nesnesi
-        #self.camera = Camera()
 
         # Görüntü ekranı
         self.video_label = tk.Label(self.root, bg="black")
