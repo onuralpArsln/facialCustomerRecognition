@@ -1,6 +1,9 @@
 import firebase_admin
 from firebase_admin import credentials, storage, firestore
 from datetime import datetime
+from PIL import Image
+from io import BytesIO
+
 
 class FirebaseHandler:
     def __init__(self):
@@ -15,8 +18,16 @@ class FirebaseHandler:
 
     def upload_image_and_save_data(self, image, image_name, collection_name):
         
+        pil_image = Image.fromarray(image)
+    
+        # Görüntüyü bir BytesIO nesnesine kaydet
+        image_buffer = BytesIO()
+        pil_image.save(image_buffer, format="JPEG")  # Görüntüyü JPEG formatında kaydet
+        image_buffer.seek(0)  # Dosyanın başına dön
+
+
         blob = self.bucket.blob(f"images/{image_name}")
-        blob.upload_from_file(image)
+        blob.upload_from_file(image_buffer)
         '''
         with open(image, "rb") as image_file:
             blob.upload_from_file(image_file)

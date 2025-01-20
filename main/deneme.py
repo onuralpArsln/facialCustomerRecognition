@@ -11,14 +11,18 @@ from database import FirebaseHandler
 import time
 from datetime import datetime
 import io
+from multiprocessing import Process, Pool
 
 class App:
     def __init__(self, root):
         
+        self.a = 0
         self.camera = Camera()
         self.mbt = MediaBorusuTahminci()
         self.fw = frameWorks()
         self.db = FirebaseHandler()
+
+        self.add_customer_process = Process(target=self.add_customer, args=(self.camera.lastFrame))
         
         self.root = root
         self.root.title("Kamera Uygulaması")
@@ -30,45 +34,45 @@ class App:
         self.video_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
         # Geçmiş butonu
-        self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.add_customer)
+        self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.open_history)
         self.history_button.pack(pady=10)
         
         # Kamerayı güncellemek için bir thread başlatıyoruz
         self.running = True
-        self.update_thread = threading.Thread(target=self.update_frame, daemon=True)
-        self.update_thread.start()
-    
+        self.update_frame()
+        
     def update_frame(self):
-        #9a = 0
-        while self.running:
-            #a = a +1
-            try:
-                time.sleep(0.1)
-                # Kamera görüntüsünü al
-                frame = self.camera.getImage()
-                # Görüntüyü RGB formatına çevir ve boyutlandır
-                locations=self.mbt.tahmin(self.camera.lastFrame)
-
-                frame=self.fw.drawBoundingBox(detectionsFromMbt=locations,frame=self.camera.lastFrame,label="salak")
-  
-                frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
-                img = Image.fromarray(frame)
-                img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
-                imgtk = ImageTk.PhotoImage(image=img)
-                self.video_label.imgtk = imgtk
-                self.video_label.configure(image=imgtk)
-                '''
-                if a == 50:
-                    self.add_customer(image=self.camera.lastFrame)
-                    a = 0
-                '''
-            except Exception as e:
-                print(f"Hata: {e}")
-            self.root.update_idletasks()
+        self.a = self.a +1
+        if not self.running:
+            return
+        try:
+            # Kamera görüntüsünü al
+            frame = self.camera.getImage()
+            if frame is None:
+                self.root.after(100, self.update_frame)
+                return
+            # Görüntüyü RGB formatına çevir ve boyutlandır
+            locations = self.mbt.tahmin(self.camera.lastFrame)
+            frame = self.fw.drawBoundingBox(detectionsFromMbt=locations, frame=self.camera.lastFrame, label="salak")
+            frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
+            
+            if self.a == 100:
+                self.add_customer(frame)
+                print("foto çekildi")
+                self.a = 0
+            
+            img = Image.fromarray(frame)
+            img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
+            imgtk = ImageTk.PhotoImage(image=img)
+            self.video_label.imgtk = imgtk
+            self.video_label.configure(image=imgtk)
+        except Exception as e:
+            print(f"Hata: {e}")
+        self.root.after(100, self.update_frame)
     
-    def add_customer(self):
+    def add_customer(self, frame):
         now = datetime.now()
-        self.db.upload_image_and_save_data(self.camera.lastFrame, str(now), "images")
+        self.db.upload_image_and_save_data(frame, str(now), "images")
 
     def open_history(self):
         # Yeni bir pencere oluştur
