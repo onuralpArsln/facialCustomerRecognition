@@ -12,6 +12,7 @@ class mpGenSys:
         self._dataList = self.manager.list()  # Shared list for processes
         self._genProcess = mp.Process(target=self.startGen)
         self._genProcess.start()
+        print("succesful")
 
     def startGen(self):
         counter = 0
