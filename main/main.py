@@ -6,7 +6,7 @@ from deneme import App
 
 
 
-
+App()
 '''
 camera = Camera()
 mbt=MediaBorusuTahminci()

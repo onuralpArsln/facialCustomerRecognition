@@ -16,9 +16,11 @@ class FirebaseHandler:
     def upload_image_and_save_data(self, image, image_name, collection_name):
         
         blob = self.bucket.blob(f"images/{image_name}")
-        #blob.upload_from_file(image)
+        blob.upload_from_file(image)
+        '''
         with open(image, "rb") as image_file:
             blob.upload_from_file(image_file)
+        '''
         blob.make_public()
         image_url = blob.public_url
         timestamp = datetime.now()

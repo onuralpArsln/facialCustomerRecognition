@@ -14,11 +14,10 @@ import io
 
 class App:
     def __init__(self, root):
-        '''
+        
         self.camera = Camera()
         self.mbt = MediaBorusuTahminci()
         self.fw = frameWorks()
-        '''
         self.db = FirebaseHandler()
         
 
@@ -35,9 +34,9 @@ class App:
         self.video_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
 
         # Geçmiş butonu
-        self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.open_history)
+        self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.add_customer)
         self.history_button.pack(pady=10)
-        '''
+        
         # Kamerayı güncellemek için bir thread başlatıyoruz
         self.running = True
         self.update_thread = threading.Thread(target=self.update_frame, daemon=True)
@@ -62,18 +61,18 @@ class App:
                 imgtk = ImageTk.PhotoImage(image=img)
                 self.video_label.imgtk = imgtk
                 self.video_label.configure(image=imgtk)
-                
+                '''
                 if a == 50:
                     self.add_customer(image=self.camera.lastFrame)
                     a = 0
-                
+                '''
             except Exception as e:
                 print(f"Hata: {e}")
             self.root.update_idletasks()
-    '''
+    
     def add_customer(self):
         now = datetime.now()
-        self.db.upload_image_and_save_data("images(silinecek)/3.jpg", str(now), "images")
+        self.db.upload_image_and_save_data(self.camera.lastFrame, str(now), "images")
 
     def open_history(self):
         # Yeni bir pencere oluştur
