@@ -36,7 +36,7 @@ class Camera:
 
         return self.lastFrame
 
-    def displayFrame(self , windowHeader: str = "Camera Feed", frame=None, fps: int= None, wait: int=1 ) ->  None:
+    def displayFrame(self , additionalFrames=None , frame=None, windowHeader: str = "Camera Feed", fps: int= None, wait: int=1 ) ->  None:
         """
         Frame görüntülemek içindir eğer parametre vermezsen son çekilen resmi görüntüler
         Args:
@@ -50,8 +50,13 @@ class Camera:
             raise("nothing to display on camera class display method, ya foto çek yada parametre ver")
         elif frame is None:
             frame=self.lastFrame
-        
-        cv2.imshow('windowHeader', frame)
+
+        cv2.imshow('Main Camera View', frame)
+        if additionalFrames is not None:
+            for index,fr in enumerate(additionalFrames):
+                name=f"Header {index}"
+                cv2.imshow(name, fr)
+            
 
         if fps is None and wait >=0 :
         # fps yok ise waite göre karar default wait 1 ms    
