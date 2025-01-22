@@ -43,6 +43,11 @@ class FaceRemember:
             time.sleep(1)
             print("img name "+i)
             self._images.append(i)
+    
+    def __del__(self):
+        print("stopping service")
+        self._genProcess.terminate()
+
 
 if __name__=="__main__":
     print("Test Init")
