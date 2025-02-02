@@ -42,7 +42,7 @@ class App:
         
         self.root = root
         self.root.title("Kamera Uygulaması")
-        self.root.state('zoomed')  # Fullscreen but with window controls
+        self.root.attributes('-zoomed', True) # Fullscreen but with window controls
         self.root.resizable(False, False)
 
         # Görüntü ekranı
@@ -237,7 +237,6 @@ class App:
             selected_date = self.calendar.selection_get()
             records = []
             selected_date_str = selected_date.strftime("%Y-%m-%d")
-            imgs_folder = "images/"
 
             for filename in os.listdir(imgs_folder):
                 if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
