@@ -18,6 +18,24 @@ import face_recognition
 import os
 import numpy as np
 import re
+import platform
+
+mod=""
+
+if "rpi" in platform.release():
+    mod="rpi"
+    from picamera2 import Picamera2
+    camera=Picamera2()
+    camera_config=camera.create_still_configuration(
+        main={"size":(640,480),"format":"RGB888"},
+        raw={"size":camera.sensor_resolution},
+    )
+    camera.configure(camera_config)
+    camera.start()
+    time.sleep(1)
+else:
+    mod="linux"
+    cap = cv2.VideoCapture(0)
 
 
 #db = FirebaseHandler()
@@ -92,13 +110,17 @@ class App:
         Args:
             show_windows (bool): If True, displays OpenCV windows; otherwise, runs silently.
         """
-          # Load known faces before starting
+
         try:
-            cap = cv2.VideoCapture(0)
-            
-            ret, frame = cap.read()
+            if mod == "linux":    
+                ret, frame = cap.read()
+            else:
+                frame=camera.capture_array()
+                #frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
             if not ret:
                 print("Failed to grab frame")
+                return
+
                 
 
             rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -170,7 +192,7 @@ class App:
             if show_windows:
                 frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
                 img = Image.fromarray(frame)
-                img = img.resize((1200, 700))  # Görüntüyü pencereye sığdır
+                img = img.resize((640, 480))  # Görüntüyü pencereye sığdır
                 imgtk = ImageTk.PhotoImage(image=img)
                 self.video_label.imgtk = imgtk
                 self.video_label.configure(image=imgtk)
