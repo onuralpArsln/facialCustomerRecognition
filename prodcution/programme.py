@@ -181,13 +181,13 @@ class App:
                         known_face_names.append(f"new_face_{new_face_id}")
 
                         name = f"new_face_{new_face_id}"
-                    '''
+                    
                     # Draw bounding box and name if windows are enabled
                     if show_windows:
                         cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
                         cv2.putText(frame, name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-                        cv2.imshow('Cropped Face', face_crop)
-                    '''
+                        #cv2.imshow('Cropped Face', face_crop)
+                    
             # Show the frame if windows are enabled
             if show_windows:
                 frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
