@@ -110,13 +110,13 @@ class App:
         Args:
             show_windows (bool): If True, displays OpenCV windows; otherwise, runs silently.
         """
-        
+
         try:
             if mod == "linux":    
                 ret, frame = cap.read()
             else:
                 frame=camera.capture_array()
-                frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+                #frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
             if not ret:
                 print("Failed to grab frame")
                 return
