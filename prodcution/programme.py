@@ -42,7 +42,7 @@ class App:
         
         self.root = root
         self.root.title("Kamera Uygulaması")
-        self.root.state('zoomed')  # Fullscreen but with window controls
+        self.root.state('normal')  # Fullscreen but with window controls
         self.root.resizable(False, False)
 
         # Görüntü ekranı
@@ -159,24 +159,24 @@ class App:
                         known_face_names.append(f"new_face_{new_face_id}")
 
                         name = f"new_face_{new_face_id}"
-
+                    '''
                     # Draw bounding box and name if windows are enabled
                     if show_windows:
                         cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
                         cv2.putText(frame, name, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
                         cv2.imshow('Cropped Face', face_crop)
-
+                    '''
             # Show the frame if windows are enabled
             if show_windows:
                 frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
                 img = Image.fromarray(frame)
-                img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
+                img = img.resize((1200, 700))  # Görüntüyü pencereye sığdır
                 imgtk = ImageTk.PhotoImage(image=img)
                 self.video_label.imgtk = imgtk
                 self.video_label.configure(image=imgtk)
         except Exception as e:
             pass
-        self.root.after(20, self.update_frame)
+        self.root.after(10, self.update_frame)
     
     
     
