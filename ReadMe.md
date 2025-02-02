@@ -84,7 +84,7 @@ sudo apt-get install python3-qt5
 ```
 
 
-## Daha büyük gereksinimler 
+##  Daha büyük gereksinimler 
 
 Burası biraz şenlikli yaklaşımına göre
 
