@@ -15,7 +15,6 @@ while cap.isOpened():
         print("Failed to grab frame")
         break
 
-    # Convert the BGR image to RGB
     rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     # Process the frame to detect faces
