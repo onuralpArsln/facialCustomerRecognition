@@ -237,11 +237,11 @@ class App:
             selected_date = self.calendar.selection_get()
             records = []
             selected_date_str = selected_date.strftime("%Y-%m-%d")
-            image_folder = "images/"
+            imgs_folder = "images/"
 
-            for filename in os.listdir(image_folder):
+            for filename in os.listdir(imgs_folder):
                 if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
-                    file_path = os.path.join(image_folder, filename)
+                    file_path = os.path.join(imgs_folder, filename)
                     try:
                         with Image.open(file_path) as img:
                             file_stats = os.stat(file_path)
