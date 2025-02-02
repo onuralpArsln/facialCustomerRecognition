@@ -42,7 +42,7 @@ class App:
         
         self.root = root
         self.root.title("Kamera Uygulaması")
-        self.root.state('zoomed')  # Fullscreen but with window controls
+        self.root.state('normal')  # Fullscreen but with window controls
         self.root.resizable(False, False)
 
         # Görüntü ekranı

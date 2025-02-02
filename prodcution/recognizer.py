@@ -4,6 +4,26 @@ import face_recognition
 import os
 import numpy as np
 import re
+import platform
+import time
+
+mod=""
+
+if "rpi" in platform.release():
+    mod="rpi"
+    from picamera2 import Picamera2
+    camera=Picamera2()
+    camera_config=camera.create_still_configuration(
+        main={"size":(640,480),"format":"RGB888"},
+        raw={"size":camera.sensor_resolution},
+    )
+    camera.configure(camera_config)
+    camera.start()
+    time.sleep(1)
+else:
+    mod="linux"
+    cap = cv2.VideoCapture(0)
+
 
 # Initialize MediaPipe Face Detection
 mp_face_detection = mp.solutions.face_detection
@@ -51,10 +71,17 @@ def detect_faces(show_windows=True):
         show_windows (bool): If True, displays OpenCV windows; otherwise, runs silently.
     """
     load_known_faces()  # Load known faces before starting
-    cap = cv2.VideoCapture(0)
 
-    while cap.isOpened():
-        ret, frame = cap.read()
+
+
+
+    while True:
+
+        if mod == "linux":    
+            ret, frame = cap.read()
+        else:
+            frame=camera.capture_array()
+            frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
         if not ret:
             print("Failed to grab frame")
             break
