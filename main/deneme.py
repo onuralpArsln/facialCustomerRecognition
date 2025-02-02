@@ -1,3 +1,5 @@
+import asyncio
+import multiprocessing
 import tkinter as tk
 from tkinter import ttk
 import requests
@@ -58,23 +60,17 @@ class App:
             frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
             '''
             if self.a == 100:
-                try:
-                    async def async_add_customer(frame):
-                        loop = asyncio.get_event_loop()
-                        await loop.run_in_executor(None, add_customer, frame)
-
-                    asyncio.run(async_add_customer(frame.copy()))
-                    self.a = 0
-                except Exception as e:
-                    print(f"Hata process tarafı: {e}")
-            '''
+                self.add_customer(frame)
+                print("foto çekildi")
+                self.a = 0
+            
             img = Image.fromarray(frame)
             img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
             imgtk = ImageTk.PhotoImage(image=img)
             self.video_label.imgtk = imgtk
             self.video_label.configure(image=imgtk)
         except Exception as e:
-            print(f"Hata: {e}")
+            pass
         self.root.after(100, self.update_frame)
     
     
@@ -113,7 +109,6 @@ class App:
         self.entry_count_var.set("Giriş sayısı: 0")
         entry_count_label = tk.Label(left_frame, textvariable=self.entry_count_var, font=("Montserrat", 12))
         entry_count_label.pack(side=tk.TOP, padx=20, pady=10)
-
 
         # Sağ çerçeve (Kaydırılabilir Canvas)
         right_frame = tk.Frame(self.history_window, width=840)
@@ -181,7 +176,7 @@ class App:
                         img = img.resize((image_width, image_height))
                         imgtk = ImageTk.PhotoImage(img)
 
-                    # Yeni bir satır oluştur (Her 3 görselde bir)
+                    # Yeni bir satır oluştur (Her 4 görselde bir)
                     if idx % 4 == 0:
                         row_frame = tk.Frame(self.tree_frame, bg="white", relief=tk.FLAT)
                         row_frame.pack(fill=tk.X, padx=10, pady=10)
@@ -197,19 +192,29 @@ class App:
 
                     # Metin bilgileri
                     info_label = tk.Label(
-                        image_frame, 
-                        text=f"Saat: {time}\nSayı: {count}", 
-                        bg="white", 
-                        justify=tk.CENTER
+                    image_frame, 
+                    text=f"Saat: {time}\nSayı: {count}", 
+                    bg="white", 
+                    justify=tk.CENTER
                     )
                     info_label.pack()
 
                 except Exception as e:
                     print(f"Fotoğraf yüklenirken hata: {e}")
+
         # Takvimde tarih seçildiğinde tabloyu güncelle
         self.calendar.bind("<<CalendarSelected>>", update_table)
         update_table()
-        self.history_window.protocol("WM_DELETE_WINDOW", self.close_history)
+        '''
+        jobs = []
+        p = multiprocessing.Process(target=update_table, args=(self,))
+        jobs.append(p)
+        p.start()
+        '''
+        '''
+        # Takvimde tarih seçildiğinde tabloyu güncelle
+        self.calendar.bind("<<CalendarSelected>>", update_table)
+        update_table()
 
 
     def on_close(self):
@@ -218,20 +223,6 @@ class App:
         #self.update_thread.join()  # Thread'i sonlandır
         #del self.camera  # Kamera nesnesini temizle
         self.root.destroy()  # Tkinter ana penceresini kapat
-
-    def close_history(self):
-        # Pencere kapatıldığında referansı sıfırla
-        self.history_window.destroy()
-        self.history_window = None
-
-
-def add_customer(frame):
-    try:
-        now = datetime.now()
-        #db.upload_image_and_save_data(frame, str(now), "images")
-        print("kayıt başarılı")
-    except Exception as e:
-        print(f"Hata kayıt kısmı: {e}")
 
 
 if __name__ == "__main__":
