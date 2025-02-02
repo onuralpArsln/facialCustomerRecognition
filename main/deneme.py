@@ -11,7 +11,11 @@ from database import FirebaseHandler
 import time
 from datetime import datetime
 import io
-from multiprocessing import Process, Pool
+import multiprocessing as mp
+import asyncio
+import os
+
+#db = FirebaseHandler()
 
 class App:
     def __init__(self, root):
@@ -20,9 +24,6 @@ class App:
         self.camera = Camera()
         self.mbt = MediaBorusuTahminci()
         self.fw = frameWorks()
-        self.db = FirebaseHandler()
-
-        self.add_customer_process = Process(target=self.add_customer, args=(self.camera.lastFrame))
         
         self.root = root
         self.root.title("Kamera Uygulaması")
@@ -32,7 +33,7 @@ class App:
         # Görüntü ekranı
         self.video_label = tk.Label(self.root, bg="black")
         self.video_label.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
-
+        self.history_window = None
         # Geçmiş butonu
         self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.open_history)
         self.history_button.pack(pady=10)
@@ -42,7 +43,7 @@ class App:
         self.update_frame()
         
     def update_frame(self):
-        self.a = self.a +1
+        #self.a = self.a +1
         if not self.running:
             return
         try:
@@ -55,12 +56,18 @@ class App:
             locations = self.mbt.tahmin(self.camera.lastFrame)
             frame = self.fw.drawBoundingBox(detectionsFromMbt=locations, frame=self.camera.lastFrame, label="salak")
             frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
-            
+            '''
             if self.a == 100:
-                self.add_customer(frame)
-                print("foto çekildi")
-                self.a = 0
-            
+                try:
+                    async def async_add_customer(frame):
+                        loop = asyncio.get_event_loop()
+                        await loop.run_in_executor(None, add_customer, frame)
+
+                    asyncio.run(async_add_customer(frame.copy()))
+                    self.a = 0
+                except Exception as e:
+                    print(f"Hata process tarafı: {e}")
+            '''
             img = Image.fromarray(frame)
             img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
             imgtk = ImageTk.PhotoImage(image=img)
@@ -70,18 +77,26 @@ class App:
             print(f"Hata: {e}")
         self.root.after(100, self.update_frame)
     
-    def add_customer(self, frame):
-        now = datetime.now()
-        self.db.upload_image_and_save_data(frame, str(now), "images")
+    
 
     def open_history(self):
+
+        if (self.history_window and self.history_window.winfo_exists()) :
+            if self.history_window.state() == "iconic":
+                self.history_window.deiconify()
+            self.history_window.lift()  # Pencereyi öne getirir
+            self.history_window.focus()  # O pencereye odaklanır
+            return
+
+
+
         # Yeni bir pencere oluştur
-        history_window = tk.Toplevel(self.root)
-        history_window.title("Geçmiş")
-        history_window.geometry("1500x800")
+        self.history_window = tk.Toplevel(self.root)
+        self.history_window.title("Geçmiş")
+        self.history_window.geometry("1500x800")
 
         # Sol çerçeve (Takvim ve giriş sayısı etiketi)
-        left_frame = tk.Frame(history_window, width=360)
+        left_frame = tk.Frame(self.history_window, width=360)
         left_frame.pack(side=tk.LEFT, fill=tk.Y, padx=20, pady=20)
 
         # Sol çerçeveyi ortalamak için bir boşluk çerçevesi ekleyin
@@ -90,7 +105,7 @@ class App:
         spacer_top.pack(side=tk.TOP, fill=tk.X)
 
         # Takvim
-        self.calendar = Calendar(left_frame, selectmode='day')
+        self.calendar = Calendar(left_frame, selectmode='day', locale='tr_TR')
         self.calendar.pack(side=tk.TOP, padx=20, pady=20)
 
         # Giriş sayısı etiketi
@@ -101,7 +116,7 @@ class App:
 
 
         # Sağ çerçeve (Kaydırılabilir Canvas)
-        right_frame = tk.Frame(history_window, width=840)
+        right_frame = tk.Frame(self.history_window, width=840)
         right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
         canvas = tk.Canvas(right_frame)
@@ -121,12 +136,36 @@ class App:
 
         def update_table(event=None):
             selected_date = self.calendar.selection_get()
-            records = self.db.get_data_by_date("images", selected_date)
+            records = []
+            selected_date_str = selected_date.strftime("%Y-%m-%d")
+            image_folder = "images/"
+
+            for filename in os.listdir(image_folder):
+                if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
+                    file_path = os.path.join(image_folder, filename)
+                    try:
+                        with Image.open(file_path) as img:
+                            file_stats = os.stat(file_path)
+                            creation_time = datetime.fromtimestamp(file_stats.st_mtime)
+                            if creation_time:
+                                date_str = str(creation_time)
+                                print(date_str)
+                                if date_str:
+                                    file_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f").date()
+                                    if file_date == selected_date:
+                                        print("appenddeyim")
+                                        records.append({
+                                            'image_url': file_path,
+                                            'timestamp': datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f"),
+                                            'count': 1
+                                        })
+                    except Exception as e:
+                        print(f"Error reading EXIF data from {filename}: {e}")
+
             self.entry_count_var.set(f"Giriş sayısı: {len(records)}")
             # Tabloyu temizle (Canvas içindeki tüm elemanları yok et)
             for widget in self.tree_frame.winfo_children():
                 widget.destroy()
-
             # Görsel boyutu
             image_width, image_height = 200, 200
 
@@ -137,10 +176,8 @@ class App:
                 count = record.get('count', 0)
 
                 try:
-                    # Fotoğrafı indir ve göster
-                    response = requests.get(photo_url)
-                    img_data = response.content
-                    with Image.open(io.BytesIO(img_data)) as img:
+                    # Fotoğrafı klasörden oku ve göster
+                    with Image.open(photo_url) as img:
                         img = img.resize((image_width, image_height))
                         imgtk = ImageTk.PhotoImage(img)
 
@@ -172,6 +209,7 @@ class App:
         # Takvimde tarih seçildiğinde tabloyu güncelle
         self.calendar.bind("<<CalendarSelected>>", update_table)
         update_table()
+        self.history_window.protocol("WM_DELETE_WINDOW", self.close_history)
 
 
     def on_close(self):
@@ -180,6 +218,20 @@ class App:
         #self.update_thread.join()  # Thread'i sonlandır
         #del self.camera  # Kamera nesnesini temizle
         self.root.destroy()  # Tkinter ana penceresini kapat
+
+    def close_history(self):
+        # Pencere kapatıldığında referansı sıfırla
+        self.history_window.destroy()
+        self.history_window = None
+
+
+def add_customer(frame):
+    try:
+        now = datetime.now()
+        #db.upload_image_and_save_data(frame, str(now), "images")
+        print("kayıt başarılı")
+    except Exception as e:
+        print(f"Hata kayıt kısmı: {e}")
 
 
 if __name__ == "__main__":
