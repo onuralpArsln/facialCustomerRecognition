@@ -63,7 +63,7 @@ class App:
                 self.add_customer(frame)
                 print("foto çekildi")
                 self.a = 0
-            
+            '''
             img = Image.fromarray(frame)
             img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
             imgtk = ImageTk.PhotoImage(image=img)
@@ -211,11 +211,11 @@ class App:
         jobs.append(p)
         p.start()
         '''
-        '''
+        
         # Takvimde tarih seçildiğinde tabloyu güncelle
         self.calendar.bind("<<CalendarSelected>>", update_table)
         update_table()
-
+        
 
     def on_close(self):
         # Pencere kapatılırken yapılacak işlemler
@@ -230,3 +230,4 @@ if __name__ == "__main__":
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", app.on_close)  # Pencere kapatma işlemi
     root.mainloop()
+    
