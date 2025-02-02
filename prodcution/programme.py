@@ -42,7 +42,7 @@ class App:
         
         self.root = root
         self.root.title("Kamera Uygulaması")
-        self.root.attributes('-zoomed', True) # Fullscreen but with window controls
+        self.root.state('zoomed')  # Fullscreen but with window controls
         self.root.resizable(False, False)
 
         # Görüntü ekranı
@@ -168,6 +168,7 @@ class App:
 
             # Show the frame if windows are enabled
             if show_windows:
+                frame = frame[:, :, ::-1]  # BGR'den RGB'ye çevir
                 img = Image.fromarray(frame)
                 img = img.resize((1600, 1000))  # Görüntüyü pencereye sığdır
                 imgtk = ImageTk.PhotoImage(image=img)
@@ -175,7 +176,7 @@ class App:
                 self.video_label.configure(image=imgtk)
         except Exception as e:
             pass
-        self.root.after(100, self.update_frame)
+        self.root.after(20, self.update_frame)
     
     
     
