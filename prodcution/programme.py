@@ -86,7 +86,7 @@ class App:
 
         return max(existing_numbers, default=0) + 1  # Next number
 
-    def update_frame(self, show_windows=False):
+    def update_frame(self, show_windows=True):
         """Detects faces, recognizes known ones, and saves new faces if unknown.
         
         Args:
