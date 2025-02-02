@@ -81,7 +81,7 @@ def detect_faces(show_windows=True):
             ret, frame = cap.read()
         else:
             frame=camera.capture_array()
-            frame=cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
+            ret=True
         if not ret:
             print("Failed to grab frame")
             break
