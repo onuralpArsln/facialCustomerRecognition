@@ -112,6 +112,7 @@ class App:
         """
 
         try:
+            ret =True
             if mod == "linux":    
                 ret, frame = cap.read()
             else:
