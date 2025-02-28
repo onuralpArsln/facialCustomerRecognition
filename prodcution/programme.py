@@ -366,7 +366,8 @@ class App:
         # Tabloyu oluştur (eğer yoksa)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS images (
-                img_path TEXT PRIMARY KEY,
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                img_path TEXT,
                 counter INTEGER,
                 first_seen DATE,
                 last_seen DATE
@@ -409,20 +410,27 @@ class App:
         # Tabloyu oluştur (eğer yoksa)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS images (
-                img_path TEXT PRIMARY KEY,
-                counter INTEGER,
-                first_seen DATE,
-                last_seen DATE
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            img_path TEXT,
+            counter INTEGER,
+            first_seen DATE,
+            last_seen DATE
             )
         ''')
 
         # Görüntünün mevcut olup olmadığını kontrol et
-        cursor.execute('SELECT * FROM images WHERE img_path = ?', (img_path,))
+        cursor.execute('SELECT * FROM images WHERE img_path = ? ORDER BY id DESC', (img_path,))
         record = cursor.fetchone()
         
         if record:
             last_seen_time = datetime.strptime(record[3], "%Y-%m-%d %H:%M:%S.%f")
-            if (datetime.now() - last_seen_time).total_seconds() > 300:
+            first_seen_date = datetime.strptime(record[2], "%Y-%m-%d %H:%M:%S.%f").date()
+            if first_seen_date != datetime.now().date():
+                cursor.execute('''
+                    INSERT INTO images (img_path, counter, first_seen, last_seen)
+                    VALUES (?, ?, ?, ?)
+                ''', (img_path, 1, datetime.now(), datetime.now()))
+            elif (datetime.now() - last_seen_time).total_seconds() > 300:
                 cursor.execute('''
                     UPDATE images
                     SET counter = counter + 1, last_seen = ?
