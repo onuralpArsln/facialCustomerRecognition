@@ -19,6 +19,7 @@ import os
 import numpy as np
 import re
 import platform
+import sqlite3
 
 mod=""
 
@@ -71,7 +72,7 @@ class App:
         self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.open_history)
         self.history_button.pack(pady=10)
 
-
+        self.add_already_customer()
         # Kamerayı güncellemek için bir thread başlatıyoruz
         self.running = True
         self.load_known_faces()
@@ -169,12 +170,15 @@ class App:
                     best_match_index = np.argmin(face_distances) if matches else None
 
                     if best_match_index is not None and matches[best_match_index]:
+                        face_path = os.path.join(imgs_folder, known_face_names[best_match_index] + ".jpg")
+                        self.add_image_to_db(face_path)
                         name = known_face_names[best_match_index]
                     else:
                         # Get the next available new_face_X number
                         new_face_id = self.get_next_face_number()
                         new_face_path = os.path.join(imgs_folder, f"new_face_{new_face_id}.jpg")
                         cv2.imwrite(new_face_path, face_crop)
+                        self.add_image_to_db(new_face_path)
                         print(f"New face saved as {new_face_path}")
 
                         # Add to known faces
@@ -262,28 +266,29 @@ class App:
             records = []
             selected_date_str = selected_date.strftime("%Y-%m-%d")
 
-            for filename in os.listdir(imgs_folder):
-                if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
-                    file_path = os.path.join(imgs_folder, filename)
-                    try:
-                        with Image.open(file_path) as img:
-                            file_stats = os.stat(file_path)
-                            creation_time = datetime.fromtimestamp(file_stats.st_mtime)
-                            if creation_time:
-                                date_str = str(creation_time)
-                                print(date_str)
-                                if date_str:
-                                    file_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f").date()
-                                    if file_date == selected_date:
-                                        print("appenddeyim")
-                                        records.append({
-                                            'image_url': file_path,
-                                            'timestamp': datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f"),
-                                            'count': 1
-                                        })
-                    except Exception as e:
-                        print(f"Error reading EXIF data from {filename}: {e}")
+            # Veritabanı bağlantısı oluştur
+            conn = sqlite3.connect('images.db')
+            cursor = conn.cursor()
 
+            # Seçilen tarihe göre kayıtları getir
+            cursor.execute('''
+                SELECT img_path, counter, first_seen, last_seen
+                FROM images
+                WHERE DATE(first_seen) = ? 
+            ''', (selected_date_str))
+
+            rows = cursor.fetchall()
+
+            for row in rows:
+                img_path, counter, first_seen, last_seen = row
+                records.append({
+                    'image_url': img_path,
+                    'timestamp': datetime.strptime(first_seen, "%Y-%m-%d %H:%M:%S.%f"),
+                    'count': counter
+                })
+
+            # Veritabanı bağlantısını kapat
+            conn.close()
             self.entry_count_var.set(f"Giriş sayısı: {len(records)}")
             # Tabloyu temizle (Canvas içindeki tüm elemanları yok et)
             for widget in self.tree_frame.winfo_children():
@@ -350,6 +355,95 @@ class App:
         #self.update_thread.join()  # Thread'i sonlandır
         #del self.camera  # Kamera nesnesini temizle
         self.root.destroy()  # Tkinter ana penceresini kapat
+
+    def add_already_customer(self):
+        records = []
+        image_folder = "prodcution/imgs"
+
+        conn = sqlite3.connect('images.db')
+        cursor = conn.cursor()
+
+        # Tabloyu oluştur (eğer yoksa)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS images (
+                img_path TEXT PRIMARY KEY,
+                counter INTEGER,
+                first_seen DATE,
+                last_seen DATE
+            )
+        ''')
+
+        for filename in os.listdir(image_folder):
+            if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
+                file_path = os.path.join(image_folder, filename)
+                try:
+                    with Image.open(file_path) as img:
+                        file_stats = os.stat(file_path)
+                        creation_time = datetime.fromtimestamp(file_stats.st_mtime)
+                        if creation_time:
+                            date_str = str(creation_time)
+                            print(date_str)
+                            if date_str:
+                                file_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f").date()
+                                print("appenddeyim")
+                                records.append({
+                                        'image_url': file_path,
+                                        'timestamp': datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f"),
+                                        'count': 1
+                                })
+                                cursor.execute('''
+                                INSERT INTO images (img_path, counter, first_seen, last_seen)
+                                VALUES (?, ?, ?, ?)
+                            ''', (file_path, 1, datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f"), datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f")))
+                except Exception as e:
+                    print(f"Error reading EXIF data from {filename}: {e}")
+        conn.commit()
+        conn.close()
+
+    def add_image_to_db(self, img_path, first_seen=datetime.now(), last_seen=datetime.now()): 
+
+        # Veritabanı bağlantısı oluştur
+        conn = sqlite3.connect('images.db')
+        cursor = conn.cursor()
+
+        # Tabloyu oluştur (eğer yoksa)
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS images (
+                img_path TEXT PRIMARY KEY,
+                counter INTEGER,
+                first_seen DATE,
+                last_seen DATE
+            )
+        ''')
+
+        # Görüntünün mevcut olup olmadığını kontrol et
+        cursor.execute('SELECT * FROM images WHERE img_path = ?', (img_path,))
+        record = cursor.fetchone()
+        
+        if record:
+            last_seen_time = datetime.strptime(record[3], "%Y-%m-%d %H:%M:%S.%f")
+            if (datetime.now() - last_seen_time).total_seconds() > 300:
+                cursor.execute('''
+                    UPDATE images
+                    SET counter = counter + 1, last_seen = ?
+                    WHERE img_path = ?
+                ''', (datetime.now(), img_path))
+            else:
+                cursor.execute('''
+                    UPDATE images
+                    SET last_seen = ?
+                    WHERE img_path = ?
+                ''', (datetime.now(), img_path))
+        else:
+            # Görüntü mevcut değilse, yeni bir kayıt ekle
+            cursor.execute('''
+                INSERT INTO images (img_path, counter, first_seen, last_seen)
+                VALUES (?, ?, ?, ?)
+            ''', (img_path, 1, datetime.now(), datetime.now()))
+
+        # Değişiklikleri kaydet ve bağlantıyı kapat
+        conn.commit()
+        conn.close()
 
 
 if __name__ == "__main__":
