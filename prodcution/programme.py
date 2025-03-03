@@ -1,3 +1,4 @@
+#!/home/onuralp/prodcution/.venv/bin/python3
 import asyncio
 import multiprocessing
 import tkinter as tk
@@ -51,6 +52,7 @@ os.makedirs(imgs_folder, exist_ok=True)
         # Global known face lists
 known_face_encodings = []
 known_face_names = []
+seen_faces={}
 
 class App:
     
@@ -72,7 +74,7 @@ class App:
         self.history_button = ttk.Button(self.root, text="Geçmiş", command=self.open_history)
         self.history_button.pack(pady=10)
 
-        self.add_already_customer()
+        #self.add_already_customer()
         # Kamerayı güncellemek için bir thread başlatıyoruz
         self.running = True
         self.load_known_faces()
@@ -171,7 +173,10 @@ class App:
 
                     if best_match_index is not None and matches[best_match_index]:
                         face_path = os.path.join(imgs_folder, known_face_names[best_match_index] + ".jpg")
-                        self.add_image_to_db(face_path)
+                        
+                        check_flag = self.check_first(face_path) 
+                        if check_flag:
+                            self.add_image_to_db(face_path)
                         name = known_face_names[best_match_index]
                     else:
                         # Get the next available new_face_X number
@@ -202,6 +207,7 @@ class App:
                 self.video_label.imgtk = imgtk
                 self.video_label.configure(image=imgtk)
         except Exception as e:
+            print(e)
             pass
         self.root.after(10, self.update_frame)
     
@@ -266,6 +272,7 @@ class App:
             records = []
             selected_date_str = selected_date.strftime("%Y-%m-%d")
 
+
             # Veritabanı bağlantısı oluştur
             conn = sqlite3.connect('images.db')
             cursor = conn.cursor()
@@ -275,11 +282,15 @@ class App:
                 SELECT img_path, counter, first_seen, last_seen
                 FROM images
                 WHERE DATE(first_seen) = ? 
-            ''', (selected_date_str))
-
+            ''', (selected_date_str,))
+            #cursor.execute('''
+            #    SELECT first_seen
+            #    FROM images
+            #               ''')
             rows = cursor.fetchall()
 
             for row in rows:
+                
                 img_path, counter, first_seen, last_seen = row
                 records.append({
                     'image_url': img_path,
@@ -358,7 +369,6 @@ class App:
 
     def add_already_customer(self):
         records = []
-        image_folder = "prodcution/imgs"
 
         conn = sqlite3.connect('images.db')
         cursor = conn.cursor()
@@ -374,9 +384,9 @@ class App:
             )
         ''')
 
-        for filename in os.listdir(image_folder):
+        for filename in os.listdir(imgs_folder):
             if filename.endswith(".jpg") or filename.endswith(".png") or filename.endswith(".jpeg"):
-                file_path = os.path.join(image_folder, filename)
+                file_path = os.path.join(imgs_folder, filename)
                 try:
                     with Image.open(file_path) as img:
                         file_stats = os.stat(file_path)
@@ -386,7 +396,7 @@ class App:
                             print(date_str)
                             if date_str:
                                 file_date = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f").date()
-                                print("appenddeyim")
+                                
                                 records.append({
                                         'image_url': file_path,
                                         'timestamp': datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S.%f"),
@@ -402,7 +412,7 @@ class App:
         conn.close()
 
     def add_image_to_db(self, img_path, first_seen=datetime.now(), last_seen=datetime.now()): 
-
+        print("veritabanı add")
         # Veritabanı bağlantısı oluştur
         conn = sqlite3.connect('images.db')
         cursor = conn.cursor()
@@ -423,26 +433,33 @@ class App:
         record = cursor.fetchone()
         
         if record:
-            last_seen_time = datetime.strptime(record[3], "%Y-%m-%d %H:%M:%S.%f")
-            first_seen_date = datetime.strptime(record[2], "%Y-%m-%d %H:%M:%S.%f").date()
+            print("record var")
+            last_seen_time = datetime.strptime(str(record[4]), "%Y-%m-%d %H:%M:%S.%f")
+            first_seen_date = datetime.strptime(str(record[3]), "%Y-%m-%d %H:%M:%S.%f").date()
+            print("Last seen", last_seen_time)
+            print("First seen", first_seen_date)
             if first_seen_date != datetime.now().date():
+                print("eski tarihli")
                 cursor.execute('''
                     INSERT INTO images (img_path, counter, first_seen, last_seen)
                     VALUES (?, ?, ?, ?)
                 ''', (img_path, 1, datetime.now(), datetime.now()))
             elif (datetime.now() - last_seen_time).total_seconds() > 300:
+                print("5 dakka geçti")
                 cursor.execute('''
                     UPDATE images
                     SET counter = counter + 1, last_seen = ?
                     WHERE img_path = ?
                 ''', (datetime.now(), img_path))
             else:
+                print("son tarih güncellendi")
                 cursor.execute('''
-                    UPDATE images
+                    UPDATE images 
                     SET last_seen = ?
                     WHERE img_path = ?
                 ''', (datetime.now(), img_path))
         else:
+            print("yeni kayıt açıldı.")
             # Görüntü mevcut değilse, yeni bir kayıt ekle
             cursor.execute('''
                 INSERT INTO images (img_path, counter, first_seen, last_seen)
@@ -452,7 +469,16 @@ class App:
         # Değişiklikleri kaydet ve bağlantıyı kapat
         conn.commit()
         conn.close()
+    def check_first(self, face_id):
+        
+        now = time.time()
+        if face_id in seen_faces and now - seen_faces[face_id] < 300:
+            
+            return False
 
+        seen_faces[face_id] = now
+        
+        return True
 
 if __name__ == "__main__":
     root = tk.Tk()
