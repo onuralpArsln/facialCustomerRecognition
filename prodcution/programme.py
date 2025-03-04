@@ -480,7 +480,26 @@ class App:
         
         return True
 
+AUTHORIZED_SERIAL = "0000000000000000"
+
+def get_serial():
+    try:
+        with open("/proc/cpuinfo", "r") as f:
+            for line in f:
+                if line.startswith("Serial"):
+                    return line.strip().split(":")[1].strip()
+    except Exception as e:
+        print(f"Seri numarası okunamadı: {e}")
+        return None
+
+def check_serial():
+    serial = get_serial()
+    if serial is None or serial != AUTHORIZED_SERIAL:
+        print("Yetkisiz cihaz! Sistem kapatılıyor...")
+        #os.system("sudo shutdown -h now")
+
 if __name__ == "__main__":
+    check_serial()
     root = tk.Tk()
     app = App(root)
     root.protocol("WM_DELETE_WINDOW", app.on_close)  # Pencere kapatma işlemi
