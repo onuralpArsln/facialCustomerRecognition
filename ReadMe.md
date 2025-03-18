@@ -30,6 +30,13 @@ source .venv/bin/activate
 deactivate
 ```
 
+### elindeki paketleri tutan bir venv içi
+
+```bash 
+python -m venv myenv --system-site-packages
+```
+
+
 
 ## Temel gereksinimler
 
