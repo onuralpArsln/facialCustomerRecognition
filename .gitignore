@@ -8,3 +8,4 @@ fromRpi/images.db
 fromRpi/pyarmor_runtime_000000/__init__.py
 fromRpi/pyarmor_runtime_000000/pyarmor_runtime.so
 fromRpi/pyarmor_runtime_000000/__pycache__/__init__.cpython-311.pyc
+fromRpi/myenc

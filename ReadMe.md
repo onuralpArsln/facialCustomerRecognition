@@ -58,7 +58,9 @@ ikinci satır muhtemelen sende farklı olacak o yüzden biraz tab sihri ile otom
 
 
 
-### Temel gereksinimler devam
+##sudo apt-get install libssl-dev
+sudo apt-get install python3.10-dev
+# Temel gereksinimler devam
 
 ```bash 
 sudo apt install build-essential python3-dev libatlas-base-dev libopenblas-dev
@@ -66,6 +68,10 @@ pip3 install --upgrade pip setuptools wheel
 sudo apt-get install build-essential cmake pkg-config
 sudo apt-get install libx11-dev libatlas-base-dev
 sudo apt-get install libgtk-3-dev libboost-python-dev
+sudo apt install libsqlite3-dev
+pip install pysqlite3 
+ln -s /usr/lib/python3.10/lib-dynload/_sqlite3.cpython-310-x86_64-linux-gnu.so myenc/lib/python3.10/site-packages/
+
 ```
 
 
@@ -99,6 +105,10 @@ Burası biraz şenlikli yaklaşımına göre
 pip3 install face-recognition 
 pip3 install opencv-python
 pip3 install git+https://github.com/ageitgey/face_recognition_models
+sudo apt install python3.10-tk
+ln -s /usr/lib/python3.10/lib-dynload/_tkinter.cpython-310-x86_64-linux-gnu.so myenc/lib/python3.10/site-packages/
+pip install tkcalendar
+
 ```
 or 
 

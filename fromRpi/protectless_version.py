@@ -21,11 +21,11 @@ import numpy as np
 import re
 import platform
 import sqlite3
-from libcamera import controls 
 mod=""
 
 if "rpi" in platform.release():
     mod="rpi"
+    from libcamera import controls 
     from picamera2 import Picamera2
     camera=Picamera2()
     camera_config=camera.create_still_configuration(
