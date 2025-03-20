@@ -1,4 +1,4 @@
-#!/home/onuralp/prodcution/.venv/bin/python3
+#!../.venv/bin/python3
 import asyncio
 import multiprocessing
 import tkinter as tk
